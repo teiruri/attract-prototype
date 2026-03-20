@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import {
   Users,
@@ -19,8 +20,18 @@ import {
   UserCheck,
   ThumbsUp,
   Activity,
+  Briefcase,
+  ChevronDown,
+  Heart,
 } from 'lucide-react'
 import { candidates, getStageColor } from '@/lib/mock-data'
+
+// 求人マスター
+const JOBS = [
+  { id: 'job_001', title: 'シニアプロダクトマネージャー', type: 'midcareer' },
+  { id: 'job_002', title: 'プロダクトマネージャー（新卒2026）', type: 'newgrad' },
+  { id: 'job_003', title: 'UXデザイナー', type: 'midcareer' },
+]
 
 // 候補者ごとの予測データ（デモ）
 // offerProb: 内定予測（志望度×ターゲットペルソナマッチ度から算出）
@@ -45,13 +56,21 @@ function getPredColor(v: number) {
 }
 
 export default function Dashboard() {
-  const totalActive = candidates.filter((c) =>
-    c.applications.some((a) => a.status === 'active')
-  ).length
-  const newgradCount = candidates.filter((c) => c.hiringType === 'newgrad' && c.applications.some(a => a.status === 'active')).length
+  const [selectedJobId, setSelectedJobId] = useState<string>('job_001')
+  const [jobDropdownOpen, setJobDropdownOpen] = useState(false)
+
+  const selectedJob = JOBS.find(j => j.id === selectedJobId)!
+
+  // 選択された求人に紐づく候補者をフィルタ
+  const jobCandidates = candidates.filter(c =>
+    c.applications.some(a => a.jobId === selectedJobId && a.status === 'active')
+  )
+
+  const totalActive = jobCandidates.length
+  const newgradCount = jobCandidates.filter(c => c.hiringType === 'newgrad').length
   const midcareerCount = totalActive - newgradCount
 
-  // 動的に各ステージの候補者数を算出
+  // 動的に各ステージの候補者数を算出（求人フィルタ済み）
   const computedStageStats = [
     { label: 'カジュアル面談', key: 'casual', color: 'bg-gray-400' },
     { label: '一次面接', key: 'interview_1', color: 'bg-blue-400' },
@@ -60,8 +79,8 @@ export default function Dashboard() {
     { label: 'オファー', key: 'offer', color: 'bg-amber-400' },
   ].map(s => ({
     ...s,
-    count: candidates.filter(c =>
-      c.applications.some(a => a.status === 'active' && a.currentStage === s.key)
+    count: jobCandidates.filter(c =>
+      c.applications.some(a => a.jobId === selectedJobId && a.status === 'active' && a.currentStage === s.key)
     ).length,
   }))
 
@@ -123,9 +142,18 @@ export default function Dashboard() {
     },
   ]
 
+  // 求人に紐づくアクションのみフィルタ
+  const jobActionItems = actionItems.filter(item => {
+    const cand = candidates.find(c => c.fullName === item.candidate)
+    return cand ? cand.applications.some(a => a.jobId === selectedJobId && a.status === 'active') : false
+  })
+
   // 内定予測人数（志望度×ターゲットペルソナマッチ度から算出、70%以上を内定見込みとしてカウント）
-  const predictedOffers = Object.values(PREDICTIONS).filter(p => p.offerProb >= 70).length
-  const predictedOffersTotal = Object.keys(PREDICTIONS).length
+  const jobPredictions = jobCandidates.map(c => ({ id: c.id, ...PREDICTIONS[c.id] })).filter(p => p.offerProb !== undefined)
+  const predictedOffers = jobPredictions.filter(p => p.offerProb >= 70).length
+  const predictedOffersTotal = jobPredictions.length
+  // 内定承諾予測（内定見込み者のうち承諾確率70%以上）
+  const predictedAcceptances = jobPredictions.filter(p => p.offerProb >= 70 && p.acceptProb >= 70).length
 
   // 今日の日付を動的に取得
   const today = new Date()
@@ -134,23 +162,70 @@ export default function Dashboard() {
 
   const stageStats = computedStageStats
 
-  // 採用分析指標（デモ）
+  // 採用分析指標（デモ）— 選択求人の候補者ベース
+  const avgOfferProb = jobPredictions.length > 0 ? Math.round(jobPredictions.reduce((s,p) => s+p.offerProb, 0) / jobPredictions.length) : 0
+  const avgAcceptProb = jobPredictions.length > 0 ? Math.round(jobPredictions.reduce((s,p) => s+p.acceptProb, 0) / jobPredictions.length) : 0
   const analyticsMetrics = [
     { label: '辞退率', value: '15%', icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', desc: '候補者都合での離脱割合' },
-    { label: '平均内定確率', value: `${Math.round(Object.values(PREDICTIONS).reduce((s,p) => s+p.offerProb, 0) / Object.keys(PREDICTIONS).length)}%`, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50', desc: '志望度×ペルソナ一致度から算出' },
-    { label: '平均承諾確率', value: `${Math.round(Object.values(PREDICTIONS).reduce((s,p) => s+p.acceptProb, 0) / Object.keys(PREDICTIONS).length)}%`, icon: ThumbsUp, color: 'text-violet-600', bg: 'bg-violet-50', desc: '過去傾向・興味度・理解度から算出' },
+    { label: '平均内定確率', value: `${avgOfferProb}%`, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50', desc: '志望度×ペルソナ一致度から算出' },
+    { label: '平均承諾確率', value: `${avgAcceptProb}%`, icon: ThumbsUp, color: 'text-violet-600', bg: 'bg-violet-50', desc: '過去傾向・興味度・理解度から算出' },
   ]
 
   return (
     <div className="p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
-        <p className="text-sm text-gray-500 mt-1">{dateStr} — 新卒・中途 採用 進捗概要</p>
+      {/* Header + Job Selector */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
+            <p className="text-sm text-gray-500 mt-1">{dateStr}</p>
+          </div>
+          {/* Job Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setJobDropdownOpen(!jobDropdownOpen)}
+              className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 transition-colors"
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedJob.type === 'newgrad' ? 'bg-pink-50' : 'bg-indigo-50'}`}>
+                <Briefcase className={`w-4 h-4 ${selectedJob.type === 'newgrad' ? 'text-pink-600' : 'text-indigo-600'}`} />
+              </div>
+              <div className="text-left">
+                <p className="text-xs text-gray-400">表示中の求人</p>
+                <p className="text-sm font-semibold text-gray-900">{selectedJob.title}</p>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${jobDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {jobDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                {JOBS.map(job => {
+                  const jobCandCount = candidates.filter(c => c.applications.some(a => a.jobId === job.id && a.status === 'active')).length
+                  return (
+                    <button
+                      key={job.id}
+                      onClick={() => { setSelectedJobId(job.id); setJobDropdownOpen(false) }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${selectedJobId === job.id ? 'bg-indigo-50' : ''}`}
+                    >
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${job.type === 'newgrad' ? 'bg-pink-50' : 'bg-indigo-50'}`}>
+                        <Briefcase className={`w-3.5 h-3.5 ${job.type === 'newgrad' ? 'text-pink-600' : 'text-indigo-600'}`} />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-medium text-gray-900">{job.title}</p>
+                        <p className="text-[10px] text-gray-400">選考中 {jobCandCount}名</p>
+                      </div>
+                      {selectedJobId === job.id && (
+                        <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {/* 選考中 */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
@@ -178,10 +253,10 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <p className="text-3xl font-bold text-gray-900">{actionItems.filter(i => i.urgency === 'high').length}</p>
+            <p className="text-3xl font-bold text-gray-900">{jobActionItems.filter(i => i.urgency === 'high').length}</p>
             <span className="text-sm text-gray-400">件</span>
           </div>
-          <p className="text-xs text-gray-400 mt-1">うち高優先 {actionItems.filter(i => i.urgency === 'high').length}件</p>
+          <p className="text-xs text-gray-400 mt-1">うち高優先 {jobActionItems.filter(i => i.urgency === 'high').length}件</p>
         </div>
 
         {/* 内定予測 */}
@@ -198,6 +273,22 @@ export default function Dashboard() {
             <span className="text-xs text-gray-300 ml-1">/ {predictedOffersTotal}人中</span>
           </div>
           <p className="text-xs text-gray-400 mt-1">志望度×ペルソナマッチ度からAI算出</p>
+        </div>
+
+        {/* 内定承諾予測 */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="label">内定承諾予測</span>
+            <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
+              <Heart className="w-4 h-4 text-violet-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <p className="text-3xl font-bold text-violet-600">{predictedAcceptances}</p>
+            <span className="text-sm text-gray-400">人</span>
+            <span className="text-xs text-gray-300 ml-1">/ 内定予測{predictedOffers}人中</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">過去傾向・興味度・理解度・志望度からAI算出</p>
         </div>
       </div>
 
@@ -237,10 +328,10 @@ export default function Dashboard() {
           <div className="card">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900">要対応タスク</h2>
-              <span className="badge bg-amber-50 text-amber-600">{actionItems.length}件</span>
+              <span className="badge bg-amber-50 text-amber-600">{jobActionItems.length}件</span>
             </div>
             <div className="divide-y divide-gray-50">
-              {actionItems.map((item, i) => {
+              {jobActionItems.map((item, i) => {
                 const Icon = item.icon
                 return (
                   <div key={i} className="px-5 py-4 flex items-start gap-3 hover:bg-gray-50 transition-colors">
@@ -307,8 +398,8 @@ export default function Dashboard() {
                   <span className="text-xs font-semibold text-gray-900">候補者別 AIプレディクション</span>
                 </div>
                 <div className="space-y-3">
-                  {candidates.map((c) => {
-                    const cApp = c.applications[0]
+                  {jobCandidates.map((c) => {
+                    const cApp = c.applications.find(a => a.jobId === selectedJobId) || c.applications[0]
                     const pred = PREDICTIONS[c.id] || { offerProb: 50, acceptProb: 60, motivationScore: 50, personaMatch: 50, interestLevel: 50, understandingLevel: 50 }
                     const pColor = getPredColor(pred.offerProb)
                     const aColor = getPredColor(pred.acceptProb)
@@ -407,8 +498,8 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="space-y-3">
-              {candidates.map((c) => {
-                const app = c.applications[0]
+              {jobCandidates.map((c) => {
+                const app = c.applications.find(a => a.jobId === selectedJobId) || c.applications[0]
                 return (
                   <Link
                     key={c.id}
