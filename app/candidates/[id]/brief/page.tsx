@@ -14,6 +14,10 @@ import {
   Sparkles,
   Send,
   Copy,
+  Mic,
+  ClipboardList,
+  Brain,
+  Zap,
 } from 'lucide-react'
 import { getCandidateById } from '@/lib/mock-data'
 
@@ -112,6 +116,41 @@ export default function BriefPage() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* 自動生成ソース */}
+            <div className="card p-5 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap className="w-4 h-4 text-indigo-500" />
+                <span className="text-sm font-semibold text-gray-900">AIが以下のデータからブリーフィングを自動生成しました</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg">
+                  <Mic className="w-4 h-4 text-emerald-600" />
+                  <div>
+                    <p className="text-xs font-medium text-emerald-800">面接録音テキスト</p>
+                    <p className="text-[10px] text-emerald-600">2回分の文字起こし済み</p>
+                  </div>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-auto" />
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg">
+                  <ClipboardList className="w-4 h-4 text-emerald-600" />
+                  <div>
+                    <p className="text-xs font-medium text-emerald-800">候補者アンケート回答</p>
+                    <p className="text-[10px] text-emerald-600">志向・価値観データ</p>
+                  </div>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-auto" />
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg">
+                  <Brain className="w-4 h-4 text-emerald-600" />
+                  <div>
+                    <p className="text-xs font-medium text-emerald-800">Attract戦略データ</p>
+                    <p className="text-[10px] text-emerald-600">訴求軸・シグナル分析</p>
+                  </div>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-auto" />
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2">※ 面接官が手作業で準備する必要はありません。申し送り事項からトーク例まで、すべてAIが自動生成しています。</p>
             </div>
 
             {/* Candidate Profile (Quick) */}

@@ -14,8 +14,27 @@ import {
   GraduationCap,
   Brain,
   Zap,
+  BarChart3,
+  Target,
+  UserCheck,
+  ThumbsUp,
+  Activity,
 } from 'lucide-react'
 import { candidates, getStageColor } from '@/lib/mock-data'
+
+// 候補者ごとの予測データ（デモ）
+const PREDICTIONS: Record<string, { offerProb: number; acceptProb: number; passProb: number }> = {
+  cand_001: { offerProb: 78, acceptProb: 85, passProb: 92 },
+  cand_002: { offerProb: 45, acceptProb: 62, passProb: 58 },
+  cand_003: { offerProb: 82, acceptProb: 88, passProb: 90 },
+  cand_004: { offerProb: 61, acceptProb: 72, passProb: 78 },
+}
+
+function getPredColor(v: number) {
+  if (v >= 75) return { bar: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50' }
+  if (v >= 55) return { bar: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' }
+  return { bar: 'bg-red-400', text: 'text-red-700', bg: 'bg-red-50' }
+}
 
 export default function Dashboard() {
   const totalActive = candidates.filter((c) =>
@@ -38,24 +57,13 @@ export default function Dashboard() {
     ).length,
   }))
 
-  // Attractプラン・レター生成の動的カウント
-  const attractCount = candidates.reduce((acc, c) =>
-    acc + c.applications.filter(a => a.attractStrategy).length, 0)
-  const letterSentCount = candidates.reduce((acc, c) =>
-    acc + c.applications.reduce((acc2, a) =>
-      acc2 + a.interviews.filter(iv => iv.feedbackLetter?.status === 'sent').length, 0), 0)
-
-  // 今日の日付を動的に取得
-  const today = new Date()
-  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][today.getDay()]
-  const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日（${dayOfWeek}）`
-
+  // KPI算出
   const actionItems = [
     {
       type: 'feedback_letter',
       candidate: '田中 美咲',
       candidateType: 'midcareer',
-      action: '一次面接の合格フィードバックレターが未送付です',
+      action: '一次面接の選考結果メールが未送付です',
       urgency: 'high',
       href: '/candidates/cand_001/feedback-letter?interview=int_002',
       icon: Mail,
@@ -73,7 +81,7 @@ export default function Dashboard() {
       type: 'signal_input',
       candidate: '田村 萌',
       candidateType: 'newgrad',
-      action: '【新卒】カジュアル面談の面談メモを入力→シグナル抽出してください',
+      action: '【新卒】カジュアル面談の録音データをアップロード→シグナル抽出してください',
       urgency: 'high',
       href: '/candidates/cand_004/signal-input',
       icon: Brain,
@@ -82,7 +90,7 @@ export default function Dashboard() {
       type: 'feedback_letter',
       candidate: '田村 萌',
       candidateType: 'newgrad',
-      action: '【新卒】カジュアル面談の合格フィードバックレターを生成・送付してください（A社選考中）',
+      action: '【新卒】カジュアル面談の選考結果メールを生成・送付してください（A社選考中）',
       urgency: 'high',
       href: '/candidates/cand_004/feedback-letter',
       icon: Mail,
@@ -107,7 +115,30 @@ export default function Dashboard() {
     },
   ]
 
+  // 内定予測（平均）
+  const avgOfferProb = Math.round(
+    Object.values(PREDICTIONS).reduce((sum, p) => sum + p.offerProb, 0) / Object.keys(PREDICTIONS).length
+  )
+  // 選考通過率
+  const passedCandidates = candidates.filter(c =>
+    c.applications.some(a => a.currentStage !== 'casual' && a.status === 'active')
+  ).length
+  const passRate = totalActive > 0 ? Math.round((passedCandidates / totalActive) * 100) : 0
+
+  // 今日の日付を動的に取得
+  const today = new Date()
+  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][today.getDay()]
+  const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日（${dayOfWeek}）`
+
   const stageStats = computedStageStats
+
+  // 採用分析指標（デモ）
+  const analyticsMetrics = [
+    { label: '選考通過率', value: `${passRate}%`, icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50', desc: '選考ステップを通過した割合' },
+    { label: '辞退率', value: '15%', icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', desc: '候補者都合での離脱割合' },
+    { label: '内定確率', value: '68%', icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50', desc: '内定に至る平均確率' },
+    { label: '内定承諾率', value: '85%', icon: ThumbsUp, color: 'text-violet-600', bg: 'bg-violet-50', desc: '内定後に承諾する確率' },
+  ]
 
   return (
     <div className="p-8">
@@ -119,6 +150,7 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">
+        {/* 選考中 */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="label">選考中</span>
@@ -126,44 +158,59 @@ export default function Dashboard() {
               <Users className="w-4 h-4 text-indigo-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{totalActive}</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-3xl font-bold text-gray-900">{totalActive}</p>
+            <span className="text-sm text-gray-400">人</span>
+          </div>
           <div className="flex gap-2 mt-1">
             <span className="text-[10px] text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">新卒 {newgradCount}名</span>
             <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">中途 {midcareerCount}名</span>
           </div>
         </div>
 
+        {/* 要対応タスク */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="label">要対応</span>
+            <span className="label">要対応タスク</span>
             <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
               <AlertCircle className="w-4 h-4 text-amber-500" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{actionItems.filter(i => i.urgency === 'high').length}</p>
-          <p className="text-xs text-gray-400 mt-1">高優先アクション</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-3xl font-bold text-gray-900">{actionItems.filter(i => i.urgency === 'high').length}</p>
+            <span className="text-sm text-gray-400">件</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">うち高優先 {actionItems.filter(i => i.urgency === 'high').length}件</p>
         </div>
 
+        {/* 内定予測 */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="label">Attractプラン</span>
+            <span className="label">内定予測</span>
             <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-emerald-600" />
+              <Target className="w-4 h-4 text-emerald-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{attractCount}</p>
-          <p className="text-xs text-gray-400 mt-1">生成済み</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-3xl font-bold text-gray-900">{avgOfferProb}</p>
+            <span className="text-sm text-gray-400">%</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">AIが算出した平均内定確率</p>
         </div>
 
+        {/* 選考通過率 */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="label">フィードバックレター</span>
+            <span className="label">選考通過率</span>
             <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
-              <Mail className="w-4 h-4 text-violet-600" />
+              <TrendingUp className="w-4 h-4 text-violet-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{letterSentCount}</p>
-          <p className="text-xs text-gray-400 mt-1">送付済み</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-3xl font-bold text-gray-900">{passRate}</p>
+            <span className="text-sm text-gray-400">%</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">選考ステップ通過の割合</p>
         </div>
       </div>
 
@@ -199,10 +246,10 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-3 gap-6">
         {/* Action Items */}
-        <div className="col-span-2">
+        <div className="col-span-2 space-y-6">
           <div className="card">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">要対応アクション</h2>
+              <h2 className="text-sm font-semibold text-gray-900">要対応タスク</h2>
               <span className="badge bg-amber-50 text-amber-600">{actionItems.length}件</span>
             </div>
             <div className="divide-y divide-gray-50">
@@ -239,6 +286,79 @@ export default function Dashboard() {
                   </div>
                 )
               })}
+            </div>
+          </div>
+
+          {/* 採用分析（AIビッグデータ） */}
+          <div className="card">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-sm font-semibold text-gray-900">採用分析（AIビッグデータ）</h2>
+            </div>
+            <div className="p-5 space-y-5">
+              {/* 4指標 */}
+              <div className="grid grid-cols-4 gap-3">
+                {analyticsMetrics.map((m, i) => {
+                  const Icon = m.icon
+                  return (
+                    <div key={i} className={`${m.bg} rounded-xl p-3`}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Icon className={`w-3.5 h-3.5 ${m.color}`} />
+                        <span className="text-[10px] font-medium text-gray-600">{m.label}</span>
+                      </div>
+                      <p className={`text-xl font-bold ${m.color}`}>{m.value}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{m.desc}</p>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* AIプレディクション */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity className="w-3.5 h-3.5 text-indigo-500" />
+                  <span className="text-xs font-semibold text-gray-900">候補者別 AIプレディクション</span>
+                </div>
+                <div className="space-y-2">
+                  {candidates.map((c) => {
+                    const app = c.applications[0]
+                    const pred = PREDICTIONS[c.id] || { offerProb: 50, acceptProb: 60, passProb: 65 }
+                    const pColor = getPredColor(pred.offerProb)
+                    const stageName = app?.currentStage === 'casual' ? 'カジュアル面談' :
+                      app?.currentStage === 'interview_1' ? '一次面接' :
+                      app?.currentStage === 'interview_2' ? '二次面接' :
+                      app?.currentStage === 'final' ? '最終面接' : app?.currentStage
+                    return (
+                      <div key={c.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className={`w-7 h-7 rounded-full ${c.avatarColor} flex items-center justify-center flex-shrink-0`}>
+                          <span className="text-[10px] font-bold text-white">{c.avatarInitials[0]}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-gray-900">{c.fullName}</span>
+                            <span className="text-[10px] text-gray-400">{stageName}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${pColor.bar} transition-all`} style={{ width: `${pred.offerProb}%` }} />
+                            </div>
+                            <span className={`text-xs font-bold ${pColor.text}`}>{pred.offerProb}%</span>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${pColor.bg} ${pColor.text} font-medium`}>
+                            {pred.offerProb >= 75 ? '高確率' : pred.offerProb >= 55 ? '中確率' : '要フォロー'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  候補者のカルテ・選考履歴をAIが分析し、確率を自動算出しています
+                </p>
+              </div>
             </div>
           </div>
         </div>

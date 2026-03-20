@@ -44,6 +44,9 @@ export default function FeedbackLetterPage() {
   )
   const [activeView, setActiveView] = useState<'edit' | 'preview'>('preview')
   const [copied, setCopied] = useState(false)
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [emailSubject, setEmailSubject] = useState('【テクノベーション株式会社】選考結果のご連絡')
 
   const currentInterview = app?.interviews.find((i) => i.id === selectedInterviewId)
   const currentLetter = currentInterview?.feedbackLetter
@@ -97,7 +100,11 @@ export default function FeedbackLetterPage() {
                   <Copy className="w-4 h-4" />
                   {copied ? 'コピーしました！' : 'テキストをコピー'}
                 </button>
-                <button onClick={handleMarkSent} className="btn-primary">
+                <button onClick={() => setShowEmailModal(true)} className="btn-primary bg-emerald-600 hover:bg-emerald-700">
+                  <Mail className="w-4 h-4" />
+                  メールで送信
+                </button>
+                <button onClick={handleMarkSent} className="btn-secondary">
                   <Send className="w-4 h-4" />
                   送付済みにする
                 </button>
@@ -425,6 +432,84 @@ export default function FeedbackLetterPage() {
           </div>
         </div>
       </div>
+
+      {/* メール送信モーダル */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-base font-bold text-gray-900">選考結果メールを送信</h3>
+              </div>
+              <button onClick={() => setShowEmailModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+            {!emailSent ? (
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="label mb-1 block">宛先</label>
+                  <input
+                    type="email"
+                    value={candidate?.email ?? 'candidate@example.com'}
+                    readOnly
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="label mb-1 block">件名</label>
+                  <input
+                    type="text"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="label mb-1 block">本文プレビュー</label>
+                  <div className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-600 h-32 overflow-y-auto leading-relaxed">
+                    <p>{displayLetter?.salutation ?? `${candidate?.fullName} 様`}</p>
+                    <p className="mt-2">{displayLetter?.passReasonSection?.substring(0, 120)}...</p>
+                    <p className="mt-1 text-indigo-600">[AI生成レター全文が送信されます]</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setEmailSent(true)
+                      setTimeout(() => {
+                        setLetterStatus('sent')
+                      }, 500)
+                    }}
+                    className="btn-primary flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Send className="w-4 h-4" />
+                    送信する
+                  </button>
+                  <button onClick={() => setShowEmailModal(false)} className="btn-secondary flex-1">
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                </div>
+                <h4 className="text-lg font-bold text-gray-900 mb-2">メールを送信しました</h4>
+                <p className="text-sm text-gray-500 mb-4">
+                  {candidate?.fullName} 様へ選考結果メールを送信しました。
+                </p>
+                <button
+                  onClick={() => { setShowEmailModal(false); setEmailSent(false) }}
+                  className="btn-primary"
+                >
+                  閉じる
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

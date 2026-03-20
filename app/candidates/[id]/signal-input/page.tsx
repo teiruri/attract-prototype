@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft,
   ChevronRight,
   Sparkles,
   FileText,
@@ -21,11 +20,30 @@ import {
   Brain,
   Target,
   ArrowRight,
+  Upload,
+  Mic,
+  Play,
+  Headphones,
+  Edit3,
+  Info,
+  Video,
+  FileAudio,
 } from 'lucide-react'
 import { getCandidateById } from '@/lib/mock-data'
 
-// AI抽出ステップアニメーション
-const EXTRACTION_STEPS = [
+// AI抽出ステップアニメーション（録音データ用・7ステップ）
+const EXTRACTION_STEPS_RECORDING = [
+  { label: '音声ファイル読み込み中...', icon: FileAudio, duration: 800 },
+  { label: 'AIによる文字起こし中...', icon: Mic, duration: 1200 },
+  { label: '発話者の識別中...', icon: Headphones, duration: 700 },
+  { label: 'キーワード・トピック抽出中...', icon: Brain, duration: 800 },
+  { label: 'キャリア価値観の分析中...', icon: Heart, duration: 700 },
+  { label: '懸念・ポジティブ反応の検出中...', icon: AlertTriangle, duration: 600 },
+  { label: 'Attractシグナルの生成中...', icon: Sparkles, duration: 500 },
+]
+
+// AI抽出ステップアニメーション（メモ入力用・6ステップ）
+const EXTRACTION_STEPS_MEMO = [
   { label: '面接メモを読み込んでいます...', icon: FileText, duration: 600 },
   { label: '発言パターンを解析中...', icon: Brain, duration: 700 },
   { label: '志向・価値観を抽出中...', icon: Heart, duration: 800 },
@@ -34,7 +52,84 @@ const EXTRACTION_STEPS = [
   { label: 'シグナルを構造化しています...', icon: Sparkles, duration: 500 },
 ]
 
-// デモ用インタビューメモ（新卒候補者用）
+// デモ用文字起こしテキスト（録音データからの自動生成を想定）
+const DEMO_TRANSCRIPT_NEWGRAD = `[00:00:12] 佐藤（面接官）：本日はお時間いただきありがとうございます。田村さん、まず就活の軸について教えていただけますか？
+
+[00:00:25] 田村：はい、ありがとうございます。私が一番大切にしているのは、裁量権を持って働ける環境です。ゼミでは自分でプロジェクトの設計から実行まで全部やらせてもらっていて、それがすごく楽しかったんです。
+
+[00:01:10] 佐藤：なるほど。大企業志向ではない？
+
+[00:01:18] 田村：正直、大企業だと最初の3年から5年は下積みが多いと聞いていて、少し不安です。でも、成長できるなら構わないとも思っています。ただ...やっぱり早くから裁量を持ちたいですね。
+
+[00:02:05] 田村：あと、社会に出たら「ユーザーの声に直接触れながら仕事したい」んです。これはすごく大事にしています。
+
+[00:03:30] 佐藤：弊社では、入社半年でプロジェクトリーダーになれる機会があるんですよ。
+
+[00:03:42] 田村：え、本当ですか？！それはすごいですね...！
+
+[00:04:15] 佐藤：若手でも意見が通る文化があって、実際に去年入社した方が...
+
+[00:04:50] 田村：そういう環境を探していました。若手でも意見が通るんですか？
+
+[00:05:20] 佐藤：はい、実際の事例をお話しますね...
+
+[00:07:00] 田村：素晴らしいですね。実は、説明会でのプロダクト説明がすごくわかりやすくて感動したんです。
+
+[00:08:15] 田村：ただ、スタートアップで長期的に働けるか不安です...
+
+[00:08:45] 佐藤：財務状況をお見せしますね。ARRは前年比...
+
+[00:09:30] 田村：なるほど、それなら少し安心しました。
+
+[00:10:00] 田村：研修制度が手厚い会社の方が安心できるかもとも思っていたんですが...
+
+[00:10:20] 佐藤：弊社のオンボーディングについてお話しますね...
+
+[00:11:00] 田村：それなら安心です！
+
+[00:12:30] 佐藤：将来のビジョンについてはいかがですか？
+
+[00:12:45] 田村：5年後は自分でプロダクトをゼロから立ち上げたいです。海外展開にも関わりたいですし、英語も活かしたいと思っています。TOEIC860点を持っています。
+
+[00:13:50] 田村：ただ、チームを引っ張るリーダーというよりは、専門性で貢献したいタイプです。
+
+[00:15:00] 佐藤：他社の選考状況も教えていただけますか？
+
+[00:15:10] 田村：大手IT企業A社の最終面接待ちと、ベンチャーB社の二次面接待ちです。ただ、御社が第一志望です。`
+
+const DEMO_TRANSCRIPT_MIDCAREER = `[00:00:15] 坂本（CEO）：田中さん、本日はお越しいただきありがとうございます。まず、率直に弊社の財務状況からお話しさせてください。
+
+[00:00:45] 坂本：現在ARRは前年比プラス180%で成長しており、ランウェイは28ヶ月あります。
+
+[00:01:20] 田中：正直に話してもらえて安心しました。成長しているんですね。
+
+[00:02:00] 前田（事業責任者）：田中さんのキャリアビジョンについてお聞かせください。
+
+[00:02:15] 田中：5年後はプロダクト全体を見るVP of Productのような役割を目指したいと思っています。そのためには早いうちから事業全体に関与できる会社がいいと思っています。
+
+[00:03:30] 前田：弊社では1年目でも事業戦略MTGに参加できますよ。
+
+[00:03:45] 田中：それは今の会社では絶対にあり得ないですね...！
+
+[00:05:00] 前田：田中さんには具体的に○○プロダクトの担当をお願いしたいと考えています。
+
+[00:05:20] 田中：具体的なプロダクトを示してもらったのは初めてで、本気度が伝わりました。
+
+[00:06:00] 坂本：そのプロダクトの課題についてどう思われますか？
+
+[00:06:15] 田中：私だったら最初にユーザーインタビューから始めます。
+
+[00:08:00] 田中：ストックオプションについても教えていただけますか？
+
+[00:08:30] 坂本：はい、弊社のSOプランは...
+
+[00:09:00] 田中：納得感があります。
+
+[00:10:30] 田中：最終的には、自分が本当にやりたいことができるかどうかで決めたいと思います。御社は今日の面談でそれが一番クリアになりました。
+
+[00:12:00] 田中：次のステップをできるだけ早く進めたいです。`
+
+// デモ用インタビューメモ（メモ入力パス用）
 const DEMO_MEMO_NEWGRAD = `【面談メモ】田村 萌（2026年3月卒）
 日時：2025年3月13日 14:00〜15:00（オンライン）
 担当：佐藤 彩花
@@ -73,25 +168,14 @@ const DEMO_MEMO_MIDCAREER = `【面接メモ】田中 美咲 — 二次面接（
 ◆ 事業継続性について（重要）
 冒頭で坂本から財務状況を先手で共有。ARR前年比+180%、ランウェイ28ヶ月を開示。
 田中さんは「正直に話してもらえて安心しました」と明確に表情が和らいだ。
-「成長しているんですね」と言いながらノートにメモを取っていた。
 
 ◆ キャリアビジョンについて
 「5年後はプロダクト全体を見るVP of Productのような役割を目指したい」と明言。
-「そのためには早いうちから事業全体に関与できる会社がいいと思っています」と語った。
-前田から「弊社では1年目でも事業戦略MTGに参加できる」と話すと「それは今の会社では絶対にあり得ない」と反応。
+前田から「弊社では1年目でも事業戦略MTGに参加できる」と話すと「今の会社では絶対にあり得ない」と反応。
 
 ◆ 担当領域の提示
 前田から「田中さんには○○プロダクトの担当をお願いしたい」と具体的に提示。
 「具体的なプロダクトを示してもらったのは初めてで、本気度が伝わりました」と発言。
-プロダクトの課題について「私だったら最初にユーザーインタビューから始めます」と即座に答えた。
-
-◆ 懸念の変化
-事業リスクへの懸念：当初High → 財務開示後にLow
-給与への不安：ストックオプションの説明後「納得感があります」と発言
-
-◆ 意思決定の軸
-「最終的には、自分が本当にやりたいことができるかどうか」
-「御社は今日の面談でそれが一番クリアになりました」
 
 ◆ エネルギーレベル：★★★★★（過去最高）
 最後に「次のステップをできるだけ早く進めたいです」と自分から言い出した。`
@@ -143,8 +227,8 @@ const EXTRACTED_SIGNALS_MIDCAREER = {
     { topic: '事業戦略MTGへの入社初日から参加', reaction: '「今の会社では絶対あり得ない」と強い反応。最大の差別化ポイントとして機能', matchStrength: 'strong' },
   ],
   concerns: [
-    { concern: '事業継続リスク', severity: 'low', status: '✅ 財務開示で解消済み。フォロー不要' },
-    { concern: '給与水準', severity: 'low', status: '✅ ストックオプション説明で「納得感あり」と解消済み' },
+    { concern: '事業継続リスク', severity: 'low', status: '財務開示で解消済み。フォロー不要' },
+    { concern: '給与水準', severity: 'low', status: 'ストックオプション説明で「納得感あり」と解消済み' },
   ],
   questionsAsked: [
     '入社後の最初の担当プロダクトはどんな課題感がありますか？',
@@ -167,6 +251,7 @@ export default function SignalInputPage() {
 
   const isNewGrad = id === 'cand_004'
   const demoMemo = isNewGrad ? DEMO_MEMO_NEWGRAD : DEMO_MEMO_MIDCAREER
+  const demoTranscript = isNewGrad ? DEMO_TRANSCRIPT_NEWGRAD : DEMO_TRANSCRIPT_MIDCAREER
   const extractedData = isNewGrad ? EXTRACTED_SIGNALS_NEWGRAD : EXTRACTED_SIGNALS_MIDCAREER
 
   const [memo, setMemo] = useState('')
@@ -174,25 +259,77 @@ export default function SignalInputPage() {
   const [extractionStep, setExtractionStep] = useState(0)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [expandedSection, setExpandedSection] = useState<string | null>('values')
+  const [uploadedFile, setUploadedFile] = useState<string | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [inputMethod, setInputMethod] = useState<'recording' | 'memo' | null>(null)
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false)
+  const [transcriptText, setTranscriptText] = useState('')
+  const [isEditingTranscript, setIsEditingTranscript] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const candidateName = candidate?.fullName ?? extractedData.candidateName
+  const candidateTitle = candidate?.currentTitle ?? ''
+
+  const activeSteps = inputMethod === 'recording' ? EXTRACTION_STEPS_RECORDING : EXTRACTION_STEPS_MEMO
 
   const handleLoadDemo = () => {
     setMemo(demoMemo)
   }
 
-  const handleExtract = async () => {
+  const handleFileUpload = (fileName: string) => {
+    setUploadedFile(fileName)
+    setInputMethod('recording')
+    setTranscriptText(demoTranscript)
+    // Auto-start extraction after brief delay
+    setTimeout(() => {
+      handleExtract('recording')
+    }, 500)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    // Simulated file upload
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      handleFileUpload(file.name)
+    }
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileUpload(file.name)
+    }
+  }
+
+  const handleDemoUpload = () => {
+    handleFileUpload('interview_recording_2025-03-15.mp3')
+  }
+
+  const handleExtract = async (method: 'recording' | 'memo') => {
+    setInputMethod(method)
     setPhase('extracting')
     setExtractionStep(0)
     const startTime = Date.now()
+    const steps = method === 'recording' ? EXTRACTION_STEPS_RECORDING : EXTRACTION_STEPS_MEMO
 
-    for (let i = 0; i < EXTRACTION_STEPS.length; i++) {
-      await new Promise((r) => setTimeout(r, EXTRACTION_STEPS[i].duration))
+    for (let i = 0; i < steps.length; i++) {
+      await new Promise((r) => setTimeout(r, steps[i].duration))
       setExtractionStep(i + 1)
+    }
+
+    if (method === 'recording') {
+      setTranscriptText(demoTranscript)
     }
 
     setElapsedMs(Date.now() - startTime)
     setPhase('result')
+  }
+
+  const handleMemoExtract = () => {
+    setInputMethod('memo')
+    handleExtract('memo')
   }
 
   const strengthColor = (s: string) =>
@@ -220,13 +357,16 @@ export default function SignalInputPage() {
           <ChevronRight className="w-3 h-3" />
           <Link href={`/candidates/${id}`} className="hover:text-gray-600">{candidateName}</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-gray-700">面談メモ入力・シグナル抽出</span>
+          <span className="text-gray-700">面接データ取り込み</span>
         </div>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-indigo-500" />
-            <h1 className="text-xl font-bold text-gray-900">AIシグナル抽出</h1>
-            <span className="badge bg-indigo-100 text-indigo-700">新機能</span>
+          <div>
+            <div className="flex items-center gap-2">
+              <Mic className="w-5 h-5 text-indigo-500" />
+              <h1 className="text-xl font-bold text-gray-900">面接データ取り込み</h1>
+              <span className="badge bg-indigo-100 text-indigo-700">AI自動抽出</span>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">{candidateName}{candidateTitle ? ` / ${candidateTitle}` : ''}</p>
           </div>
           {phase === 'result' && (
             <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
@@ -239,102 +379,241 @@ export default function SignalInputPage() {
 
       <div className="p-8">
         {phase === 'input' && (
-          <div className="max-w-4xl mx-auto">
-            {/* Efficiency banner */}
-            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-5 mb-6 text-white">
-              <div className="flex items-start justify-between">
+          <div className="flex gap-8 max-w-7xl mx-auto">
+            {/* Main Content */}
+            <div className="flex-1">
+              {/* Step 1 Header */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">1</div>
                 <div>
-                  <h2 className="text-base font-bold mb-1">面談メモ → 候補者シグナル、AIが即時構造化</h2>
-                  <p className="text-sm text-indigo-100 leading-relaxed">
-                    面談後のメモや議事録をそのままペーストするだけ。AIが志向・価値観・ポジティブ反応・懸念を<br />
-                    自動的に抽出し、Attractプランとフィードバックレターの生成に即座に活用します。
-                  </p>
+                  <h2 className="text-base font-bold text-gray-900">データ取り込み</h2>
+                  <p className="text-xs text-gray-500">面接の録音データまたはメモを取り込み、AIがシグナルを自動抽出します</p>
                 </div>
-                <div className="text-right flex-shrink-0 ml-6">
-                  <div className="flex items-center gap-3">
-                    <div className="text-center">
-                      <p className="text-xs text-indigo-200">従来</p>
-                      <p className="text-2xl font-bold">30分</p>
+              </div>
+
+              {/* Two input methods side by side */}
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                {/* Card A: Recording Upload */}
+                <div className="card p-6 border-2 border-indigo-200 relative">
+                  <div className="absolute -top-3 left-4">
+                    <span className="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">推奨</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-3 mt-1">
+                    <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
+                      <Mic className="w-5 h-5 text-indigo-600" />
                     </div>
-                    <ArrowRight className="w-5 h-5 text-indigo-300" />
-                    <div className="text-center">
-                      <p className="text-xs text-indigo-200">ATTRACT</p>
-                      <p className="text-2xl font-bold text-yellow-300">〜10秒</p>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">録音データから取り込み</h3>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                    AIが録音を自動でテキスト化し、面接のハイライトと傾向を抽出します
+                  </p>
+
+                  {/* Upload Area */}
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                      isDragOver
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : uploadedFile
+                          ? 'border-emerald-300 bg-emerald-50'
+                          : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50'
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".mp3,.wav,.m4a,.mp4,.webm"
+                      className="hidden"
+                      onChange={handleFileInputChange}
+                    />
+                    {uploadedFile ? (
+                      <>
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-emerald-700">{uploadedFile}</p>
+                        <p className="text-xs text-emerald-500 mt-1">アップロード完了</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-gray-600">
+                          ファイルをドラッグ＆ドロップ
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">またはクリックして選択</p>
+                        <p className="text-[10px] text-gray-400 mt-2">MP3, WAV, M4A, MP4, WebM</p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Demo upload button */}
+                  <button
+                    onClick={handleDemoUpload}
+                    className="w-full mt-3 text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg py-2 px-3 transition-colors font-medium"
+                  >
+                    <Play className="w-3 h-3 inline mr-1" />
+                    デモ録音で試してみる
+                  </button>
+                </div>
+
+                {/* Card B: Memo/Transcript Input */}
+                <div className="card p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">メモ・議事録から取り込み</h3>
+                      <span className="text-[10px] text-gray-400">追記</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                    面接後のメモや議事録をペーストすると、AIがシグナルを抽出します
+                  </p>
+
+                  <textarea
+                    value={memo}
+                    onChange={(e) => setMemo(e.target.value)}
+                    placeholder="面接の議事録やメモを貼り付けてください。箇条書きでも、雑なメモでも大丈夫です。"
+                    rows={8}
+                    className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed resize-none font-mono"
+                  />
+
+                  <div className="flex items-center justify-between mt-3">
+                    <button
+                      onClick={handleLoadDemo}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg py-1.5 px-3 transition-colors font-medium"
+                    >
+                      デモデータを入力
+                    </button>
+                    <div className="flex gap-2">
+                      {memo.length > 0 && (
+                        <button
+                          onClick={() => setMemo('')}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          クリア
+                        </button>
+                      )}
+                      <button
+                        onClick={handleMemoExtract}
+                        disabled={memo.length < 20}
+                        className={`btn-primary text-xs px-4 py-2 ${memo.length < 20 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        AIで抽出
+                      </button>
+                    </div>
+                  </div>
+                  {memo.length > 0 && (
+                    <p className="text-[10px] text-gray-400 mt-2">{memo.length}文字入力済み</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Efficiency banner */}
+              <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-5 text-white">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-base font-bold mb-1">録音データ → シグナル抽出、AIが全自動で処理</h2>
+                    <p className="text-sm text-indigo-100 leading-relaxed">
+                      面接の録音ファイルをアップロードするだけ。AIが文字起こし・発話者識別・シグナル抽出を<br />
+                      ワンステップで完了し、Attractプランとフィードバックレターの生成に即座に活用します。
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-6">
+                    <div className="flex items-center gap-3">
+                      <div className="text-center">
+                        <p className="text-xs text-indigo-200">従来</p>
+                        <p className="text-2xl font-bold">30分</p>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-indigo-300" />
+                      <div className="text-center">
+                        <p className="text-xs text-indigo-200">ATTRACT</p>
+                        <p className="text-2xl font-bold text-yellow-300">~10秒</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Input area */}
-            <div className="card p-6 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-gray-900">面談メモ・議事録を入力</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    面談後のメモをそのままペースト。箇条書き・会話形式・どんな形式でも対応します。
-                  </p>
+            {/* Right Sidebar */}
+            <div className="w-72 flex-shrink-0 space-y-4">
+              {/* Recording Tips */}
+              <div className="card p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-blue-500" />
+                  <h3 className="text-xs font-bold text-gray-800">録音のヒント</h3>
                 </div>
-                <button
-                  onClick={handleLoadDemo}
-                  className="btn-secondary text-xs"
-                >
-                  デモデータを読み込む
-                </button>
-              </div>
-              <textarea
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                placeholder={`例）
-【面談メモ】${candidateName}
-日時：2025年3月15日 14:00
-
-・裁量をもって働きたいと話していた
-・「大企業では意見が通らない」と不満を示す
-・弊社のスピード感について「ここが一番魅力的」と反応
-...`}
-                rows={14}
-                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed resize-none font-mono"
-              />
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-gray-400">
-                  {memo.length > 0 ? `${memo.length}文字入力済み` : '面談メモを入力してください'}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setMemo('')}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                    disabled={memo.length === 0}
-                  >
-                    クリア
-                  </button>
-                  <button
-                    onClick={handleExtract}
-                    disabled={memo.length < 20}
-                    className={`btn-primary px-6 ${memo.length < 20 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    AIでシグナルを抽出する
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Tips */}
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { icon: FileText, title: 'どんな形式でもOK', desc: '箇条書き、会話メモ、議事録形式、どれでも抽出できます' },
-                { icon: Brain, title: '6項目を自動抽出', desc: '志向・価値観・関心・反応・懸念・質問を構造化します' },
-                { icon: Target, title: 'EVPと自動照合', desc: '企業魅力プロファイルと自動的にマッチング分析します' },
-              ].map((tip, i) => (
-                <div key={i} className="card p-4">
-                  <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center mb-3">
-                    <tip.icon className="w-4 h-4 text-indigo-600" />
+                <div className="space-y-2 text-xs text-gray-600 leading-relaxed">
+                  <div className="flex items-start gap-2">
+                    <Mic className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <span>静かな環境で録音すると精度が向上します</span>
                   </div>
-                  <p className="text-xs font-semibold text-gray-800 mb-1">{tip.title}</p>
-                  <p className="text-xs text-gray-500 leading-relaxed">{tip.desc}</p>
+                  <div className="flex items-start gap-2">
+                    <Headphones className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <span>マイクは発話者に近い位置に配置してください</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Video className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <span>Zoom/Teams等の録画ファイルもそのまま使えます</span>
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              {/* AI Accuracy */}
+              <div className="card p-5 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-4 h-4 text-emerald-600" />
+                  <h3 className="text-xs font-bold text-emerald-800">AI精度</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-emerald-700">文字起こし精度</span>
+                      <span className="text-sm font-bold text-emerald-700">97.5%</span>
+                    </div>
+                    <div className="w-full bg-emerald-100 rounded-full h-1.5">
+                      <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: '97.5%' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-emerald-700">シグナル検出精度</span>
+                      <span className="text-sm font-bold text-emerald-700">94.2%</span>
+                    </div>
+                    <div className="w-full bg-emerald-100 rounded-full h-1.5">
+                      <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: '94.2%' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Supported Formats */}
+              <div className="card p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileAudio className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-xs font-bold text-gray-800">対応フォーマット</h3>
+                </div>
+                <div className="space-y-1.5">
+                  {[
+                    { ext: 'MP3', desc: '音声ファイル', icon: '🎵' },
+                    { ext: 'WAV', desc: '高品質音声', icon: '🎵' },
+                    { ext: 'M4A', desc: 'Apple音声', icon: '🎵' },
+                    { ext: 'MP4', desc: '動画ファイル', icon: '🎬' },
+                    { ext: 'WebM', desc: 'Web動画', icon: '🎬' },
+                  ].map((fmt) => (
+                    <div key={fmt.ext} className="flex items-center gap-2 text-xs">
+                      <span className="w-12 font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded text-center">{fmt.ext}</span>
+                      <span className="text-gray-500">{fmt.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -346,15 +625,31 @@ export default function SignalInputPage() {
               <div className="w-20 h-20 rounded-full border-4 border-indigo-100" />
               <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <Brain className="w-7 h-7 text-indigo-600" />
+                {inputMethod === 'recording' ? (
+                  <Mic className="w-7 h-7 text-indigo-600" />
+                ) : (
+                  <Brain className="w-7 h-7 text-indigo-600" />
+                )}
               </div>
             </div>
 
-            <h2 className="text-lg font-bold text-gray-900 mb-2">AIがシグナルを抽出中...</h2>
-            <p className="text-sm text-gray-400 mb-8">面談メモを解析してシグナルを構造化しています</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">
+              {inputMethod === 'recording' ? 'AIが録音データを処理中...' : 'AIがシグナルを抽出中...'}
+            </h2>
+            <p className="text-sm text-gray-400 mb-2">
+              {inputMethod === 'recording'
+                ? '録音データから文字起こしとシグナル抽出を行っています'
+                : '面談メモを解析してシグナルを構造化しています'}
+            </p>
+            {uploadedFile && inputMethod === 'recording' && (
+              <p className="text-xs text-gray-400 mb-8 flex items-center justify-center gap-1.5">
+                <FileAudio className="w-3.5 h-3.5" />
+                {uploadedFile}
+              </p>
+            )}
 
             <div className="text-left space-y-2 max-w-sm mx-auto">
-              {EXTRACTION_STEPS.map((step, i) => {
+              {activeSteps.map((step, i) => {
                 const StepIcon = step.icon
                 const isDone = extractionStep > i
                 const isCurrent = extractionStep === i
@@ -384,6 +679,17 @@ export default function SignalInputPage() {
 
         {phase === 'result' && (
           <div className="max-w-5xl mx-auto">
+            {/* Step 2 Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-sm font-bold">2</div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">AI抽出結果</h2>
+                <p className="text-xs text-gray-500">
+                  {inputMethod === 'recording' ? '録音データから抽出されたシグナル' : 'メモから抽出されたシグナル'}
+                </p>
+              </div>
+            </div>
+
             {/* Efficiency Achievement Banner */}
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -409,6 +715,68 @@ export default function SignalInputPage() {
                 </div>
               </div>
             </div>
+
+            {/* Transcript Section (for recording input) */}
+            {inputMethod === 'recording' && transcriptText && (
+              <div className="card overflow-hidden mb-6">
+                <button
+                  className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                  onClick={() => setTranscriptExpanded(!transcriptExpanded)}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-indigo-500" />
+                    <span className="text-sm font-semibold text-gray-900">文字起こしテキスト</span>
+                    <span className="badge bg-indigo-50 text-indigo-600 text-[10px]">自動生成</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!transcriptExpanded && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setTranscriptExpanded(true)
+                          setIsEditingTranscript(true)
+                        }}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        編集・追記
+                      </button>
+                    )}
+                    {transcriptExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
+                </button>
+                {transcriptExpanded && (
+                  <div className="px-5 pb-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs text-gray-400">AI文字起こし精度: 97.5%</p>
+                      <button
+                        onClick={() => setIsEditingTranscript(!isEditingTranscript)}
+                        className={`text-xs flex items-center gap-1 px-2 py-1 rounded ${
+                          isEditingTranscript ? 'text-emerald-600 bg-emerald-50' : 'text-indigo-600 hover:bg-indigo-50'
+                        }`}
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        {isEditingTranscript ? '編集中' : '編集・追記'}
+                      </button>
+                    </div>
+                    {isEditingTranscript ? (
+                      <textarea
+                        value={transcriptText}
+                        onChange={(e) => setTranscriptText(e.target.value)}
+                        rows={15}
+                        className="w-full text-xs border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed resize-none font-mono bg-gray-50"
+                      />
+                    ) : (
+                      <div className="bg-gray-50 rounded-xl p-4 max-h-80 overflow-y-auto">
+                        <pre className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed font-mono">
+                          {transcriptText}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Attract Angle */}
             <div className="card p-5 mb-6 border-l-4 border-indigo-500 bg-indigo-50">
@@ -570,9 +938,13 @@ export default function SignalInputPage() {
                   </div>
                 </div>
 
-                {/* Next Steps */}
+                {/* Step 3: Next Steps */}
                 <div className="card p-5 bg-indigo-50 border-indigo-200">
-                  <p className="text-xs font-bold text-indigo-800 mb-3">シグナルを活用した次のステップ</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold">3</div>
+                    <p className="text-xs font-bold text-indigo-800">次のステップ</p>
+                  </div>
+                  <p className="text-[10px] text-indigo-500 mb-3">シグナルを活用してアクションを起こす</p>
                   <div className="space-y-2">
                     <Link
                       href={`/candidates/${id}/feedback-letter`}
@@ -614,7 +986,7 @@ export default function SignalInputPage() {
                     </div>
                     <div className="bg-white rounded-lg p-2">
                       <p className="text-xs text-gray-400">節約時間</p>
-                      <p className="text-lg font-bold text-emerald-600">〜30分</p>
+                      <p className="text-lg font-bold text-emerald-600">~30分</p>
                     </div>
                   </div>
                   <p className="text-[10px] text-emerald-600 mt-2 text-center">
@@ -627,10 +999,10 @@ export default function SignalInputPage() {
             {/* Bottom Action */}
             <div className="mt-6 flex gap-3 justify-end">
               <button
-                onClick={() => { setPhase('input'); setMemo('') }}
+                onClick={() => { setPhase('input'); setMemo(''); setUploadedFile(null); setInputMethod(null); setTranscriptText('') }}
                 className="btn-secondary"
               >
-                別のメモを入力する
+                別のデータを取り込む
               </button>
               <Link href={`/candidates/${id}`} className="btn-primary">
                 <CheckCircle2 className="w-4 h-4" />

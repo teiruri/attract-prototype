@@ -19,8 +19,18 @@ import {
   Brain,
   GraduationCap,
   Upload,
+  Target,
+  ThumbsUp,
+  Activity,
 } from 'lucide-react'
 import { getCandidateById, getStageColor, getStageLabel, getSignalStrengthColor, getSignalStrengthLabel } from '@/lib/mock-data'
+
+const PREDICTIONS: Record<string, { offerProb: number; acceptProb: number; passProb: number }> = {
+  cand_001: { offerProb: 78, acceptProb: 85, passProb: 92 },
+  cand_002: { offerProb: 45, acceptProb: 62, passProb: 58 },
+  cand_003: { offerProb: 82, acceptProb: 88, passProb: 90 },
+  cand_004: { offerProb: 61, acceptProb: 72, passProb: 78 },
+}
 
 type Tab = 'overview' | 'interviews' | 'signals' | 'card'
 
@@ -347,6 +357,41 @@ export default function CandidateDetailPage() {
                   </span>
                 </div>
               )}
+
+              {/* AI予測分析 */}
+              {(() => {
+                const pred = PREDICTIONS[id] || { offerProb: 55, acceptProb: 65, passProb: 70 }
+                const metrics = [
+                  { label: '内定確率', value: pred.offerProb, icon: Target, color: 'indigo' },
+                  { label: '内定承諾確率', value: pred.acceptProb, icon: ThumbsUp, color: 'emerald' },
+                  { label: '次ステップ通過', value: pred.passProb, icon: Activity, color: 'violet' },
+                ]
+                return (
+                  <div className="card p-5">
+                    <p className="label mb-3">AI予測分析</p>
+                    <div className="space-y-3">
+                      {metrics.map((m, i) => {
+                        const Icon = m.icon
+                        return (
+                          <div key={i}>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <Icon className={`w-3 h-3 text-${m.color}-500`} />
+                                <span className="text-[10px] text-gray-500">{m.label}</span>
+                              </div>
+                              <span className={`text-xs font-bold text-${m.color}-600`}>{m.value}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-1.5">
+                              <div className={`bg-${m.color}-500 h-1.5 rounded-full`} style={{ width: `${m.value}%` }} />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-3">過去の類似候補者データから算出</p>
+                  </div>
+                )
+              })()}
 
               {/* Quick Actions */}
               <div className="card p-5">
