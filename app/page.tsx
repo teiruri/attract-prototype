@@ -162,14 +162,10 @@ export default function Dashboard() {
 
   const stageStats = computedStageStats
 
-  // 採用分析指標（デモ）— 選択求人の候補者ベース
-  const avgOfferProb = jobPredictions.length > 0 ? Math.round(jobPredictions.reduce((s,p) => s+p.offerProb, 0) / jobPredictions.length) : 0
-  const avgAcceptProb = jobPredictions.length > 0 ? Math.round(jobPredictions.reduce((s,p) => s+p.acceptProb, 0) / jobPredictions.length) : 0
-  const analyticsMetrics = [
-    { label: '辞退率', value: '15%', icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', desc: '候補者都合での離脱割合' },
-    { label: '平均内定確率', value: `${avgOfferProb}%`, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50', desc: '志望度×ペルソナ一致度から算出' },
-    { label: '平均承諾確率', value: `${avgAcceptProb}%`, icon: ThumbsUp, color: 'text-violet-600', bg: 'bg-violet-50', desc: '過去傾向・興味度・理解度から算出' },
-  ]
+  // 選考ファネル指標 — 選択求人の候補者ベース・分母を明示
+  // 累計エントリー数（過去に辞退・不合格含む全候補者。デモでは選考中＋辞退分で計算）
+  const totalEntries = totalActive + (selectedJobId === 'job_001' ? 2 : selectedJobId === 'job_002' ? 1 : 0) // デモ: 過去辞退者を加算
+  const withdrawnCount = selectedJobId === 'job_001' ? 2 : selectedJobId === 'job_002' ? 1 : 0 // デモ: 選考辞退者数
 
   return (
     <div className="p-8">
@@ -367,25 +363,73 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* 採用分析（AIビッグデータ） */}
+          {/* 選考ファネル分析 */}
           <div className="card">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-indigo-600" />
-              <h2 className="text-sm font-semibold text-gray-900">採用分析（AIビッグデータ）</h2>
+              <h2 className="text-sm font-semibold text-gray-900">選考ファネル分析</h2>
+              <span className="text-[10px] text-gray-400 ml-auto">この求人の累計データ</span>
             </div>
             <div className="p-5 space-y-5">
-              {/* 3指標 */}
-              <div className="grid grid-cols-3 gap-3">
-                {analyticsMetrics.map((m, i) => {
-                  const Icon = m.icon
+              {/* ファネル — 分母を明示 */}
+              <div className="space-y-2">
+                {[
+                  {
+                    label: 'エントリー',
+                    count: totalEntries,
+                    total: totalEntries,
+                    color: 'bg-indigo-500',
+                    desc: 'この求人への累計応募者数',
+                  },
+                  {
+                    label: '選考中',
+                    count: totalActive,
+                    total: totalEntries,
+                    color: 'bg-blue-500',
+                    desc: `エントリー${totalEntries}人のうち現在選考中`,
+                  },
+                  {
+                    label: '選考辞退',
+                    count: withdrawnCount,
+                    total: totalEntries,
+                    color: 'bg-amber-500',
+                    desc: `エントリー${totalEntries}人のうち候補者都合で辞退`,
+                  },
+                  {
+                    label: '内定予測',
+                    count: predictedOffers,
+                    total: totalActive,
+                    color: 'bg-emerald-500',
+                    desc: `選考中${totalActive}人のうちAIが内定見込みと判定`,
+                  },
+                  {
+                    label: '承諾予測',
+                    count: predictedAcceptances,
+                    total: predictedOffers,
+                    color: 'bg-violet-500',
+                    desc: `内定予測${predictedOffers}人のうちAIが承諾見込みと判定`,
+                  },
+                ].map((step, i) => {
+                  const pct = step.total > 0 ? Math.round((step.count / step.total) * 100) : 0
+                  const barWidth = totalEntries > 0 ? Math.max(8, Math.round((step.count / totalEntries) * 100)) : 0
                   return (
-                    <div key={i} className={`${m.bg} rounded-xl p-3`}>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Icon className={`w-3.5 h-3.5 ${m.color}`} />
-                        <span className="text-[10px] font-medium text-gray-600">{m.label}</span>
+                    <div key={i} className="group">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-700">{step.label}</span>
+                          <span className="text-[10px] text-gray-400">{step.desc}</span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-sm font-bold text-gray-900">{step.count}</span>
+                          <span className="text-[10px] text-gray-400">人</span>
+                          {step.label !== 'エントリー' && (
+                            <span className="text-[10px] text-gray-300 ml-1">({pct}%)</span>
+                          )}
+                        </div>
                       </div>
-                      <p className={`text-xl font-bold ${m.color}`}>{m.value}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{m.desc}</p>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${step.color} transition-all`} style={{ width: `${barWidth}%` }} />
+                      </div>
                     </div>
                   )
                 })}
