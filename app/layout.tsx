@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import Sidebar from '@/components/Sidebar'
+import LayoutShell from '@/components/LayoutShell'
 
 export const metadata: Metadata = {
   title: 'ATTRACT — AI採用ストーリー設計プラットフォーム | by カケハシスカイ',
@@ -20,12 +20,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans">
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="ml-60 flex-1 min-h-screen">
-            {children}
-          </main>
-        </div>
+        <LayoutShell>
+          {children}
+        </LayoutShell>
       </body>
     </html>
   )
