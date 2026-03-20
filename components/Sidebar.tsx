@@ -20,6 +20,7 @@ const navItems = [
   { label: '求人管理', href: '/jobs', icon: Briefcase },
   { label: '企業魅力設定', href: '/settings/attraction-profile', icon: Sparkles },
   { label: 'EVPサーベイ連携', href: '/settings/evp-survey', icon: BarChart3 },
+  { label: 'REVP診断レポート', href: '/settings/revp-report', icon: BarChart3 },
   { label: '設定', href: '/settings', icon: Settings },
 ]
 
