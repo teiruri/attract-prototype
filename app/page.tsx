@@ -21,6 +21,34 @@ export default function Dashboard() {
   const totalActive = candidates.filter((c) =>
     c.applications.some((a) => a.status === 'active')
   ).length
+  const newgradCount = candidates.filter((c) => c.hiringType === 'newgrad' && c.applications.some(a => a.status === 'active')).length
+  const midcareerCount = totalActive - newgradCount
+
+  // 動的に各ステージの候補者数を算出
+  const computedStageStats = [
+    { label: 'カジュアル面談', key: 'casual', color: 'bg-gray-400' },
+    { label: '一次面接', key: 'interview_1', color: 'bg-blue-400' },
+    { label: '二次面接', key: 'interview_2', color: 'bg-indigo-400' },
+    { label: '最終面接', key: 'final', color: 'bg-purple-400' },
+    { label: 'オファー', key: 'offer', color: 'bg-amber-400' },
+  ].map(s => ({
+    ...s,
+    count: candidates.filter(c =>
+      c.applications.some(a => a.status === 'active' && a.currentStage === s.key)
+    ).length,
+  }))
+
+  // Attractプラン・レター生成の動的カウント
+  const attractCount = candidates.reduce((acc, c) =>
+    acc + c.applications.filter(a => a.attractStrategy).length, 0)
+  const letterSentCount = candidates.reduce((acc, c) =>
+    acc + c.applications.reduce((acc2, a) =>
+      acc2 + a.interviews.filter(iv => iv.feedbackLetter?.status === 'sent').length, 0), 0)
+
+  // 今日の日付を動的に取得
+  const today = new Date()
+  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][today.getDay()]
+  const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日（${dayOfWeek}）`
 
   const actionItems = [
     {
@@ -79,20 +107,14 @@ export default function Dashboard() {
     },
   ]
 
-  const stageStats = [
-    { label: 'カジュアル面談', count: 2, color: 'bg-gray-400' },
-    { label: '一次面接', count: 0, color: 'bg-blue-400' },
-    { label: '二次面接', count: 1, color: 'bg-indigo-400' },
-    { label: '最終面接', count: 1, color: 'bg-purple-400' },
-    { label: 'オファー', count: 0, color: 'bg-amber-400' },
-  ]
+  const stageStats = computedStageStats
 
   return (
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
-        <p className="text-sm text-gray-500 mt-1">2025年3月15日（土）— 新卒・中途 採用 進捗概要</p>
+        <p className="text-sm text-gray-500 mt-1">{dateStr} — 新卒・中途 採用 進捗概要</p>
       </div>
 
       {/* KPI Cards */}
@@ -106,8 +128,8 @@ export default function Dashboard() {
           </div>
           <p className="text-3xl font-bold text-gray-900">{totalActive}</p>
           <div className="flex gap-2 mt-1">
-            <span className="text-[10px] text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">新卒 1名</span>
-            <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">中途 3名</span>
+            <span className="text-[10px] text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded">新卒 {newgradCount}名</span>
+            <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">中途 {midcareerCount}名</span>
           </div>
         </div>
 
@@ -129,7 +151,7 @@ export default function Dashboard() {
               <Sparkles className="w-4 h-4 text-emerald-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">3</p>
+          <p className="text-3xl font-bold text-gray-900">{attractCount}</p>
           <p className="text-xs text-gray-400 mt-1">生成済み</p>
         </div>
 
@@ -140,7 +162,7 @@ export default function Dashboard() {
               <Mail className="w-4 h-4 text-violet-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">3</p>
+          <p className="text-3xl font-bold text-gray-900">{letterSentCount}</p>
           <p className="text-xs text-gray-400 mt-1">送付済み</p>
         </div>
       </div>

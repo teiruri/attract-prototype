@@ -31,6 +31,25 @@ export default function BriefPage() {
   if (!candidate) return <div className="p-8">候補者が見つかりません</div>
 
   const handleCopy = () => {
+    const briefText = [
+      `【面接官ブリーフィングシート】${candidate.fullName}`,
+      `面接: ${upcomingInterview?.stageLabel ?? ''} — ${upcomingInterview?.scheduledAt ?? ''}`,
+      `面接官: ${upcomingInterview?.interviewers.join('、') ?? ''}`,
+      '',
+      `■ 候補者: ${candidate.fullName}（${candidate.currentTitle} / ${candidate.currentCompany}）`,
+      card ? `■ 推薦スコア: ${card.hiringScore}/100` : '',
+      card ? `■ サマリー: ${card.profileSummary}` : '',
+      '',
+      attractPlan ? '■ 前回からの申し送り事項:' : '',
+      ...(attractPlan?.continuityNotes.map((n, i) => `  ${i + 1}. ${n}`) ?? []),
+      '',
+      attractPlan ? '■ 今回伝えるべきキーメッセージ:' : '',
+      ...(attractPlan?.keyMessages.map((m, i) => `  ${i + 1}. ${m.message}`) ?? []),
+      '',
+      attractPlan ? '■ 候補者への推薦質問:' : '',
+      ...(attractPlan?.questionsToAsk.map((q, i) => `  Q${i + 1}. ${q}`) ?? []),
+    ].filter(Boolean).join('\n')
+    navigator.clipboard.writeText(briefText)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

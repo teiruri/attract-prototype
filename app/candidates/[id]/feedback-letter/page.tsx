@@ -288,7 +288,7 @@ export default function FeedbackLetterPage() {
                           <div className="flex items-center gap-2 mb-2">
                             <Sparkles className="w-4 h-4 text-indigo-600" />
                             <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide">
-                              田中さんへのメッセージ
+                              {candidate.fullName.split(' ')[0]}さんへのメッセージ
                             </p>
                           </div>
                           <p className="text-sm text-gray-700 leading-relaxed">

@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'sans-serif'],
+        sans: ['Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif'],
       },
     },
   },

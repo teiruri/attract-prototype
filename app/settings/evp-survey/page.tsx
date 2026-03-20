@@ -392,7 +392,7 @@ export default function EvpSurveyPage() {
               <div>
                 <p className="text-xs font-semibold text-amber-800 mb-1">ご注意</p>
                 <p className="text-xs text-amber-700 leading-relaxed">
-                  取り込み後はATTRAC内のEVP設定を確認・調整してから保存してください。
+                  取り込み後はATTRACT内のEVP設定を確認・調整してから保存してください。
                   サーベイデータはあくまで叩き台です。実際の採用コンセプトに合わせて編集を推奨します。
                 </p>
               </div>

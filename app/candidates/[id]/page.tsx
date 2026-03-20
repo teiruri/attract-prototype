@@ -287,7 +287,14 @@ export default function CandidateDetailPage() {
                       style={{ width: `${app.candidateCard.hiringScore}%` }}
                     />
                   </div>
-                  <span className="badge bg-emerald-100 text-emerald-700">強く推薦</span>
+                  <span className={`badge ${
+                    app.candidateCard.recommendation === 'strong_yes' ? 'bg-emerald-100 text-emerald-700' :
+                    app.candidateCard.recommendation === 'yes' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {app.candidateCard.recommendation === 'strong_yes' ? '強く推薦' :
+                     app.candidateCard.recommendation === 'yes' ? '推薦' : '要検討'}
+                  </span>
                 </div>
               )}
 

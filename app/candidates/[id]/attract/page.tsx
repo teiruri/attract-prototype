@@ -153,8 +153,9 @@ export default function AttractPage() {
               <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-100" />
               <div className="space-y-4">
                 {strategy.stepwiseApproach.map((step, i) => {
-                  const isCompleted = i < 2
-                  const isCurrent = i === 2
+                  const completedCount = app?.interviews.filter(iv => iv.status === 'completed').length ?? 0
+                  const isCompleted = i < completedCount
+                  const isCurrent = i === completedCount
                   return (
                     <div key={i} className="flex gap-4 relative">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${

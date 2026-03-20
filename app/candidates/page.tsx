@@ -9,10 +9,20 @@ type FilterType = 'all' | 'newgrad' | 'midcareer'
 
 export default function CandidatesPage() {
   const [filter, setFilter] = useState<FilterType>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const filtered = candidates.filter((c) => {
-    if (filter === 'newgrad') return c.hiringType === 'newgrad'
-    if (filter === 'midcareer') return c.hiringType !== 'newgrad'
+    if (filter === 'newgrad' && c.hiringType !== 'newgrad') return false
+    if (filter === 'midcareer' && c.hiringType === 'newgrad') return false
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      return (
+        c.fullName.toLowerCase().includes(q) ||
+        c.currentCompany.toLowerCase().includes(q) ||
+        c.currentTitle.toLowerCase().includes(q) ||
+        c.email.toLowerCase().includes(q)
+      )
+    }
     return true
   })
 
@@ -37,6 +47,8 @@ export default function CandidatesPage() {
           <input
             type="text"
             placeholder="候補者名・会社名で検索..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
