@@ -23,11 +23,19 @@ import {
 import { candidates, getStageColor } from '@/lib/mock-data'
 
 // 候補者ごとの予測データ（デモ）
-const PREDICTIONS: Record<string, { offerProb: number; acceptProb: number; passProb: number }> = {
-  cand_001: { offerProb: 78, acceptProb: 85, passProb: 92 },
-  cand_002: { offerProb: 45, acceptProb: 62, passProb: 58 },
-  cand_003: { offerProb: 82, acceptProb: 88, passProb: 90 },
-  cand_004: { offerProb: 61, acceptProb: 72, passProb: 78 },
+// offerProb: 内定予測（志望度×ターゲットペルソナマッチ度から算出）
+// acceptProb: 内定承諾確率（過去傾向・ターゲット一致率・興味度・理解度・志望度から算出）
+// motivationScore: 志望度
+// personaMatch: ターゲットペルソナマッチ度
+const PREDICTIONS: Record<string, {
+  offerProb: number; acceptProb: number;
+  motivationScore: number; personaMatch: number;
+  interestLevel: number; understandingLevel: number;
+}> = {
+  cand_001: { offerProb: 78, acceptProb: 85, motivationScore: 82, personaMatch: 91, interestLevel: 88, understandingLevel: 75 },
+  cand_002: { offerProb: 45, acceptProb: 52, motivationScore: 55, personaMatch: 68, interestLevel: 60, understandingLevel: 48 },
+  cand_003: { offerProb: 82, acceptProb: 88, motivationScore: 85, personaMatch: 94, interestLevel: 90, understandingLevel: 82 },
+  cand_004: { offerProb: 61, acceptProb: 72, motivationScore: 70, personaMatch: 76, interestLevel: 75, understandingLevel: 65 },
 }
 
 function getPredColor(v: number) {
@@ -115,15 +123,9 @@ export default function Dashboard() {
     },
   ]
 
-  // 内定予測（平均）
-  const avgOfferProb = Math.round(
-    Object.values(PREDICTIONS).reduce((sum, p) => sum + p.offerProb, 0) / Object.keys(PREDICTIONS).length
-  )
-  // 選考通過率
-  const passedCandidates = candidates.filter(c =>
-    c.applications.some(a => a.currentStage !== 'casual' && a.status === 'active')
-  ).length
-  const passRate = totalActive > 0 ? Math.round((passedCandidates / totalActive) * 100) : 0
+  // 内定予測人数（志望度×ターゲットペルソナマッチ度から算出、70%以上を内定見込みとしてカウント）
+  const predictedOffers = Object.values(PREDICTIONS).filter(p => p.offerProb >= 70).length
+  const predictedOffersTotal = Object.keys(PREDICTIONS).length
 
   // 今日の日付を動的に取得
   const today = new Date()
@@ -134,10 +136,9 @@ export default function Dashboard() {
 
   // 採用分析指標（デモ）
   const analyticsMetrics = [
-    { label: '選考通過率', value: `${passRate}%`, icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50', desc: '選考ステップを通過した割合' },
     { label: '辞退率', value: '15%', icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', desc: '候補者都合での離脱割合' },
-    { label: '内定確率', value: '68%', icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50', desc: '内定に至る平均確率' },
-    { label: '内定承諾率', value: '85%', icon: ThumbsUp, color: 'text-violet-600', bg: 'bg-violet-50', desc: '内定後に承諾する確率' },
+    { label: '平均内定確率', value: `${Math.round(Object.values(PREDICTIONS).reduce((s,p) => s+p.offerProb, 0) / Object.keys(PREDICTIONS).length)}%`, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50', desc: '志望度×ペルソナ一致度から算出' },
+    { label: '平均承諾確率', value: `${Math.round(Object.values(PREDICTIONS).reduce((s,p) => s+p.acceptProb, 0) / Object.keys(PREDICTIONS).length)}%`, icon: ThumbsUp, color: 'text-violet-600', bg: 'bg-violet-50', desc: '過去傾向・興味度・理解度から算出' },
   ]
 
   return (
@@ -149,7 +150,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         {/* 選考中 */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
@@ -192,25 +193,11 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <p className="text-3xl font-bold text-gray-900">{avgOfferProb}</p>
-            <span className="text-sm text-gray-400">%</span>
+            <p className="text-3xl font-bold text-emerald-600">{predictedOffers}</p>
+            <span className="text-sm text-gray-400">人</span>
+            <span className="text-xs text-gray-300 ml-1">/ {predictedOffersTotal}人中</span>
           </div>
-          <p className="text-xs text-gray-400 mt-1">AIが算出した平均内定確率</p>
-        </div>
-
-        {/* 選考通過率 */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="label">選考通過率</span>
-            <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-violet-600" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <p className="text-3xl font-bold text-gray-900">{passRate}</p>
-            <span className="text-sm text-gray-400">%</span>
-          </div>
-          <p className="text-xs text-gray-400 mt-1">選考ステップ通過の割合</p>
+          <p className="text-xs text-gray-400 mt-1">志望度×ペルソナマッチ度からAI算出</p>
         </div>
       </div>
 
@@ -296,8 +283,8 @@ export default function Dashboard() {
               <h2 className="text-sm font-semibold text-gray-900">採用分析（AIビッグデータ）</h2>
             </div>
             <div className="p-5 space-y-5">
-              {/* 4指標 */}
-              <div className="grid grid-cols-4 gap-3">
+              {/* 3指標 */}
+              <div className="grid grid-cols-3 gap-3">
                 {analyticsMetrics.map((m, i) => {
                   const Icon = m.icon
                   return (
@@ -319,36 +306,68 @@ export default function Dashboard() {
                   <Activity className="w-3.5 h-3.5 text-indigo-500" />
                   <span className="text-xs font-semibold text-gray-900">候補者別 AIプレディクション</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {candidates.map((c) => {
-                    const app = c.applications[0]
-                    const pred = PREDICTIONS[c.id] || { offerProb: 50, acceptProb: 60, passProb: 65 }
+                    const cApp = c.applications[0]
+                    const pred = PREDICTIONS[c.id] || { offerProb: 50, acceptProb: 60, motivationScore: 50, personaMatch: 50, interestLevel: 50, understandingLevel: 50 }
                     const pColor = getPredColor(pred.offerProb)
-                    const stageName = app?.currentStage === 'casual' ? 'カジュアル面談' :
-                      app?.currentStage === 'interview_1' ? '一次面接' :
-                      app?.currentStage === 'interview_2' ? '二次面接' :
-                      app?.currentStage === 'final' ? '最終面接' : app?.currentStage
+                    const aColor = getPredColor(pred.acceptProb)
+                    const stageName = cApp?.currentStage === 'casual' ? 'カジュアル面談' :
+                      cApp?.currentStage === 'interview_1' ? '一次面接' :
+                      cApp?.currentStage === 'interview_2' ? '二次面接' :
+                      cApp?.currentStage === 'final' ? '最終面接' : cApp?.currentStage
                     return (
-                      <div key={c.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors">
-                        <div className={`w-7 h-7 rounded-full ${c.avatarColor} flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-[10px] font-bold text-white">{c.avatarInitials[0]}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-gray-900">{c.fullName}</span>
-                            <span className="text-[10px] text-gray-400">{stageName}</span>
+                      <div key={c.id} className="p-3 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className={`w-7 h-7 rounded-full ${c.avatarColor} flex items-center justify-center flex-shrink-0`}>
+                            <span className="text-[10px] font-bold text-white">{c.avatarInitials[0]}</span>
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${pColor.bar} transition-all`} style={{ width: `${pred.offerProb}%` }} />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-gray-900">{c.fullName}</span>
+                              <span className="text-[10px] text-gray-400">{stageName}</span>
                             </div>
-                            <span className={`text-xs font-bold ${pColor.text}`}>{pred.offerProb}%</span>
+                          </div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${pColor.bg} ${pColor.text} font-medium`}>
+                            {pred.offerProb >= 75 ? '内定見込み' : pred.offerProb >= 55 ? '中確率' : '要フォロー'}
+                          </span>
+                        </div>
+                        {/* 2つの確率バー */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-[10px] text-gray-500">内定予測</span>
+                              <span className={`text-[10px] font-bold ${pColor.text}`}>{pred.offerProb}%</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${pColor.bar}`} style={{ width: `${pred.offerProb}%` }} />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-[10px] text-gray-500">内定承諾確率</span>
+                              <span className={`text-[10px] font-bold ${aColor.text}`}>{pred.acceptProb}%</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${aColor.bar}`} style={{ width: `${pred.acceptProb}%` }} />
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${pColor.bg} ${pColor.text} font-medium`}>
-                            {pred.offerProb >= 75 ? '高確率' : pred.offerProb >= 55 ? '中確率' : '要フォロー'}
-                          </span>
+                        {/* 算出根拠 */}
+                        <div className="flex gap-2 mt-2">
+                          {[
+                            { label: '志望度', value: pred.motivationScore },
+                            { label: 'ペルソナ一致', value: pred.personaMatch },
+                            { label: '興味度', value: pred.interestLevel },
+                            { label: '理解度', value: pred.understandingLevel },
+                          ].map((factor, fi) => (
+                            <div key={fi} className="flex-1 text-center">
+                              <p className={`text-[10px] font-bold ${factor.value >= 75 ? 'text-indigo-600' : factor.value >= 55 ? 'text-amber-600' : 'text-red-500'}`}>
+                                {factor.value}
+                              </p>
+                              <p className="text-[9px] text-gray-400">{factor.label}</p>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )

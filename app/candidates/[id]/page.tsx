@@ -25,11 +25,15 @@ import {
 } from 'lucide-react'
 import { getCandidateById, getStageColor, getStageLabel, getSignalStrengthColor, getSignalStrengthLabel } from '@/lib/mock-data'
 
-const PREDICTIONS: Record<string, { offerProb: number; acceptProb: number; passProb: number }> = {
-  cand_001: { offerProb: 78, acceptProb: 85, passProb: 92 },
-  cand_002: { offerProb: 45, acceptProb: 62, passProb: 58 },
-  cand_003: { offerProb: 82, acceptProb: 88, passProb: 90 },
-  cand_004: { offerProb: 61, acceptProb: 72, passProb: 78 },
+const PREDICTIONS: Record<string, {
+  offerProb: number; acceptProb: number;
+  motivationScore: number; personaMatch: number;
+  interestLevel: number; understandingLevel: number;
+}> = {
+  cand_001: { offerProb: 78, acceptProb: 85, motivationScore: 82, personaMatch: 91, interestLevel: 88, understandingLevel: 75 },
+  cand_002: { offerProb: 45, acceptProb: 52, motivationScore: 55, personaMatch: 68, interestLevel: 60, understandingLevel: 48 },
+  cand_003: { offerProb: 82, acceptProb: 88, motivationScore: 85, personaMatch: 94, interestLevel: 90, understandingLevel: 82 },
+  cand_004: { offerProb: 61, acceptProb: 72, motivationScore: 70, personaMatch: 76, interestLevel: 75, understandingLevel: 65 },
 }
 
 type Tab = 'overview' | 'interviews' | 'signals' | 'card'
@@ -360,35 +364,52 @@ export default function CandidateDetailPage() {
 
               {/* AI予測分析 */}
               {(() => {
-                const pred = PREDICTIONS[id] || { offerProb: 55, acceptProb: 65, passProb: 70 }
-                const metrics = [
-                  { label: '内定確率', value: pred.offerProb, icon: Target, color: 'indigo' },
-                  { label: '内定承諾確率', value: pred.acceptProb, icon: ThumbsUp, color: 'emerald' },
-                  { label: '次ステップ通過', value: pred.passProb, icon: Activity, color: 'violet' },
-                ]
+                const pred = PREDICTIONS[id] || { offerProb: 55, acceptProb: 65, motivationScore: 50, personaMatch: 50, interestLevel: 50, understandingLevel: 50 }
                 return (
                   <div className="card p-5">
                     <p className="label mb-3">AI予測分析</p>
                     <div className="space-y-3">
-                      {metrics.map((m, i) => {
-                        const Icon = m.icon
-                        return (
-                          <div key={i}>
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-1.5">
-                                <Icon className={`w-3 h-3 text-${m.color}-500`} />
-                                <span className="text-[10px] text-gray-500">{m.label}</span>
-                              </div>
-                              <span className={`text-xs font-bold text-${m.color}-600`}>{m.value}%</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-1.5">
-                              <div className={`bg-${m.color}-500 h-1.5 rounded-full`} style={{ width: `${m.value}%` }} />
-                            </div>
+                      {/* 内定予測 */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <Target className="w-3 h-3 text-indigo-500" />
+                            <span className="text-[10px] text-gray-500">内定予測</span>
                           </div>
-                        )
-                      })}
+                          <span className="text-xs font-bold text-indigo-600">{pred.offerProb}%</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5">
+                          <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${pred.offerProb}%` }} />
+                        </div>
+                      </div>
+                      {/* 内定承諾確率（重要） */}
+                      <div className="bg-emerald-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <ThumbsUp className="w-3 h-3 text-emerald-600" />
+                            <span className="text-[10px] font-medium text-emerald-700">内定承諾確率</span>
+                          </div>
+                          <span className="text-sm font-bold text-emerald-700">{pred.acceptProb}%</span>
+                        </div>
+                        <div className="w-full bg-emerald-200 rounded-full h-2 mb-2">
+                          <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${pred.acceptProb}%` }} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {[
+                            { label: '志望度', value: pred.motivationScore },
+                            { label: 'ペルソナ一致', value: pred.personaMatch },
+                            { label: '興味度', value: pred.interestLevel },
+                            { label: '理解度', value: pred.understandingLevel },
+                          ].map((f, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                              <span className="text-[9px] text-gray-500">{f.label}</span>
+                              <span className={`text-[10px] font-bold ${f.value >= 75 ? 'text-emerald-600' : f.value >= 55 ? 'text-amber-600' : 'text-red-500'}`}>{f.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-3">過去の類似候補者データから算出</p>
+                    <p className="text-[10px] text-gray-400 mt-2">過去傾向・ターゲット一致率・興味度・理解度・志望度から算出</p>
                   </div>
                 )
               })()}
