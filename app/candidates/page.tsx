@@ -36,7 +36,7 @@ export default function CandidatesPage() {
         </div>
         <Link href="/candidates/new" className="btn-primary">
           <Plus className="w-4 h-4" />
-          候補者を登録
+          候補者を取り込む
         </Link>
       </div>
 
