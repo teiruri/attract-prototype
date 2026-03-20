@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -519,6 +519,14 @@ export default function CandidateDetailPage() {
                   </div>
                 )}
 
+                {/* 面接官 評価入力フォーム */}
+                {interview.status === 'completed' && (
+                  <InterviewEvaluationForm
+                    interviewId={interview.id}
+                    hasExistingEval={!!interview.evaluation}
+                  />
+                )}
+
                 {/* Handoff Notes */}
                 {interview.handoffNotes && interview.handoffNotes.length > 0 && (
                   <div className="border-t border-gray-100 pt-3 mt-3">
@@ -791,6 +799,176 @@ export default function CandidateDetailPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// 面接官 評価入力コンポーネント
+const EVAL_CRITERIA = [
+  { key: 'skill_match', label: 'スキルマッチ度', desc: '求めるスキルセットとの一致度' },
+  { key: 'culture_fit', label: 'カルチャーフィット', desc: '組織・チームへの適合性' },
+  { key: 'motivation', label: '志望度・意欲', desc: '入社への熱意と成長意欲' },
+  { key: 'communication', label: 'コミュニケーション', desc: '論理性・伝達力・傾聴力' },
+  { key: 'potential', label: 'ポテンシャル', desc: '将来的な成長余地と活躍可能性' },
+]
+
+function InterviewEvaluationForm({ interviewId, hasExistingEval }: { interviewId: string; hasExistingEval: boolean }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [scores, setScores] = useState<Record<string, number>>({})
+  const [comment, setComment] = useState('')
+  const [concerns, setConcerns] = useState('')
+  const [overallScore, setOverallScore] = useState(0)
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleScoreChange = useCallback((key: string, value: number) => {
+    setScores(prev => ({ ...prev, [key]: value }))
+  }, [])
+
+  const handleSubmit = () => {
+    setSubmitted(true)
+    setTimeout(() => setIsOpen(false), 1500)
+  }
+
+  if (submitted) {
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4 flex items-center gap-2">
+        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <span className="text-sm text-emerald-700 font-medium">評価が保存されました</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-4">
+      {!isOpen ? (
+        <button
+          onClick={() => setIsOpen(true)}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed transition-colors ${
+            hasExistingEval
+              ? 'border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-500'
+              : 'border-indigo-300 text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
+          }`}
+        >
+          <Star className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            {hasExistingEval ? '評価を編集する' : '面接官評価を入力する'}
+          </span>
+        </button>
+      ) : (
+        <div className="border border-indigo-200 rounded-xl bg-white shadow-sm overflow-hidden">
+          <div className="bg-indigo-50 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm font-semibold text-indigo-900">面接官評価入力</span>
+            </div>
+            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 text-sm">
+              ✕
+            </button>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* 評価軸ごとのスコア */}
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-3">評価軸別スコア</p>
+              <div className="space-y-3">
+                {EVAL_CRITERIA.map((criteria) => (
+                  <div key={criteria.key}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <span className="text-xs font-medium text-gray-700">{criteria.label}</span>
+                        <span className="text-[10px] text-gray-400 ml-1.5">{criteria.desc}</span>
+                      </div>
+                      <span className="text-xs font-bold text-indigo-600">
+                        {scores[criteria.key] || '-'}/5
+                      </span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => handleScoreChange(criteria.key, s)}
+                          className={`flex-1 h-8 rounded-lg text-xs font-medium transition-all ${
+                            s <= (scores[criteria.key] || 0)
+                              ? s >= 4 ? 'bg-indigo-500 text-white' : s >= 3 ? 'bg-indigo-300 text-white' : 'bg-amber-400 text-white'
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 総合評価 */}
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-2">総合評価</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setOverallScore(s)}
+                    className="p-1"
+                  >
+                    <Star
+                      className={`w-6 h-6 transition-colors ${
+                        s <= overallScore ? 'text-amber-400 fill-amber-400' : 'text-gray-200'
+                      }`}
+                    />
+                  </button>
+                ))}
+                <span className="text-sm text-gray-500 ml-2 self-center">
+                  {overallScore > 0 ? `${overallScore}/5` : '未選択'}
+                </span>
+              </div>
+            </div>
+
+            {/* 評価コメント */}
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">評価コメント</p>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="面接の印象、候補者の強み、改善点などを自由にご記入ください"
+                rows={3}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              />
+            </div>
+
+            {/* 懸念事項 */}
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">懸念事項（あれば）</p>
+              <textarea
+                value={concerns}
+                onChange={(e) => setConcerns(e.target.value)}
+                placeholder="採用にあたって気になった点、確認が必要な事項など"
+                rows={2}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+              />
+            </div>
+
+            {/* 送信ボタン */}
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={handleSubmit}
+                disabled={overallScore === 0}
+                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                評価を保存する
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="btn-secondary"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
