@@ -1,6 +1,7 @@
 import type {
   Candidate,
   CompanyAttractionProfile,
+  UploadedDocument,
 } from './types'
 
 // ==========================================
@@ -89,6 +90,56 @@ export const candidates: Candidate[] = [
     createdAt: '2025-02-15',
     avatarInitials: '田中',
     avatarColor: 'bg-violet-500',
+    documents: [
+      {
+        id: 'doc_001',
+        candidateId: 'cand_001',
+        type: 'resume',
+        fileName: '田中美咲_履歴書.pdf',
+        fileSize: '245 KB',
+        uploadedAt: '2025-02-15',
+        uploadedBy: '佐藤 彩花',
+        parseStatus: 'parsed',
+        parsedData: {
+          summary: 'NTTデータ フロンティアにて5年間、ITコンサルタントおよびPM補佐として大規模プロジェクトを推進。プロダクト思考が高く、ユーザー視点での課題解決に長けた人材。PMP・PSPO取得済み。',
+          keySkills: ['プロジェクトマネジメント', 'プロダクト企画', 'ユーザーリサーチ', 'アジャイル開発', 'ステークホルダー管理', 'データ分析'],
+          careerHistory: [
+            { company: 'NTTデータ フロンティア株式会社', role: 'ITコンサルタント / PM補佐', period: '2020年4月〜現在', highlights: ['大手製造業ERPプロジェクト（50名規模）のPMO', '社内新規事業のPM補佐として0→1フェーズを推進', '顧客向けワークショップを年間20回以上ファシリテート'] },
+            { company: 'アクセンチュア株式会社（インターン）', role: 'コンサルタント補佐', period: '2019年8月〜2020年2月', highlights: ['DX推進プロジェクトにて業務プロセス分析を担当'] },
+          ],
+          education: [
+            { school: '慶應義塾大学', faculty: '総合政策学部', year: '2020年3月卒' },
+          ],
+          certifications: ['PMP（Project Management Professional）', 'PSPO（Professional Scrum Product Owner）', 'TOEIC 890点'],
+          strengths: ['ユーザー視点での課題抽出力', 'エンジニアとの協働・翻訳力', 'ステークホルダーとの合意形成力', 'データに基づく意思決定'],
+          motivationKeywords: ['裁量', '意思決定', 'プロダクト思考', 'スピード感', 'ユーザーリサーチ'],
+          attractAngleHints: ['現職では裁量が限定的 → 自社プロダクトを持てる環境が最大の訴求軸', '大企業の意思決定速度に不満 → スピード感のある組織文化を訴求', 'ユーザーリサーチへの強い関心 → 月10件のインタビュー実績で訴求'],
+        },
+      },
+      {
+        id: 'doc_002',
+        candidateId: 'cand_001',
+        type: 'cv',
+        fileName: '田中美咲_職務経歴書.pdf',
+        fileSize: '380 KB',
+        uploadedAt: '2025-02-15',
+        uploadedBy: '佐藤 彩花',
+        parseStatus: 'parsed',
+        parsedData: {
+          summary: '大規模ERPプロジェクトのPMOを3年経験後、社内新規事業のPM補佐として0→1フェーズを推進。プロダクト思考とアジャイル手法を実践的に身につけた人材。特にユーザーインタビューの設計・実施に強み。',
+          keySkills: ['要件定義', 'ロードマップ策定', 'スプリント設計', 'ユーザーインタビュー設計', 'KPI設計・分析', 'プレゼンテーション'],
+          careerHistory: [
+            { company: 'NTTデータ フロンティア株式会社', role: 'PM補佐（新規事業）', period: '2023年4月〜現在', highlights: ['社内新規事業の0→1フェーズをPMO→PM補佐として推進', 'ユーザーインタビュー（累計40件以上）の設計・実施・分析', 'ロードマップの策定からMVPリリースまでの管理を担当'] },
+            { company: 'NTTデータ フロンティア株式会社', role: 'ITコンサルタント（ERPプロジェクト）', period: '2020年4月〜2023年3月', highlights: ['大手製造業向けERP導入プロジェクト（予算5億円・50名体制）のPMO', '業務プロセス分析・要件定義・ベンダー管理を推進', 'ステークホルダー（部長〜役員クラス）との合意形成をリード'] },
+          ],
+          education: [{ school: '慶應義塾大学', faculty: '総合政策学部', year: '2020年3月卒' }],
+          certifications: ['PMP', 'PSPO'],
+          strengths: ['0→1フェーズのプロダクト立ち上げ経験', 'ユーザーインタビュー設計力', '大規模プロジェクトの管理経験'],
+          motivationKeywords: ['自律', 'プロダクトオーナーシップ', '仮説検証', 'MVP開発'],
+          attractAngleHints: ['新規事業PM補佐の経験 → フルPMとしての裁量拡大を訴求', '大規模→スタートアップへの転換志向 → スピード感を訴求'],
+        },
+      },
+    ],
     applications: [
       {
         id: 'app_001',
@@ -719,6 +770,52 @@ export const candidates: Candidate[] = [
     internship: 'メガベンチャーC（半年・プロダクト企画）',
     jobHuntingAxis: '①裁量をもってプロジェクトを動かせる ②ユーザーに近い距離で仕事できる ③グローバルに活躍できる環境',
     toeicScore: 860,
+    documents: [
+      {
+        id: 'doc_003',
+        candidateId: 'cand_004',
+        type: 'entry_sheet',
+        fileName: '田村萌_エントリーシート.pdf',
+        fileSize: '180 KB',
+        uploadedAt: '2025-03-13',
+        uploadedBy: '佐藤 彩花',
+        parseStatus: 'parsed',
+        parsedData: {
+          summary: '東京大学経済学部4年生。プロダクト研究会の代表としてプロジェクト設計〜実行を完結させた経験を持つ。ビジネスコンテスト全国3位の実績あり。メガベンチャーCでの半年間のインターン（プロダクト企画）が原体験。',
+          keySkills: ['プロジェクト設計・実行', 'ユーザーインタビュー', 'プレゼンテーション', 'チームリーダーシップ', 'データ分析（Excel・Python基礎）', '英語コミュニケーション'],
+          careerHistory: [
+            { company: 'メガベンチャーC（インターン）', role: 'プロダクト企画アシスタント', period: '2024年4月〜2024年9月', highlights: ['新機能のユーザーインタビュー15件を設計・実施', 'プロダクトロードマップの策定に参加', 'MVP機能の企画提案がプロダクトに採用'] },
+          ],
+          education: [
+            { school: '東京大学', faculty: '経済学部 経済学科', year: '2026年3月卒予定' },
+          ],
+          certifications: ['TOEIC 860点'],
+          strengths: ['プロジェクト推進力（研究会代表として10名以上をマネジメント）', 'ユーザー視点の課題発見力（インターンでの原体験）', '論理的思考力（ビジネスコンテスト全国3位）', 'グローバルコミュニケーション力（TOEIC860）'],
+          motivationKeywords: ['裁量', 'ユーザー近接', 'プロダクト企画', 'グローバル', '若手活躍'],
+          attractAngleHints: ['インターンでユーザーインタビューの面白さに目覚めた → 月10件のインタビュー実績で訴求', '研究会代表経験 → 入社半年でリーダー機会がある環境を訴求', 'TOEIC860 → グローバルプロダクト開発への参画を訴求'],
+        },
+      },
+      {
+        id: 'doc_004',
+        candidateId: 'cand_004',
+        type: 'resume',
+        fileName: '田村萌_履歴書.pdf',
+        fileSize: '210 KB',
+        uploadedAt: '2025-03-13',
+        uploadedBy: '佐藤 彩花',
+        parseStatus: 'parsed',
+        parsedData: {
+          summary: '東京大学経済学部在籍。学業と並行してプロダクト研究会の代表を務め、メガベンチャーCでのインターンを経験。プロダクトマネジメントへの志向が明確で、理論と実践の両面から基礎を身につけている。',
+          keySkills: ['経済分析', '統計学', 'Python（基礎）', '企画書作成', 'ファシリテーション'],
+          careerHistory: [],
+          education: [{ school: '東京大学', faculty: '経済学部 経済学科', year: '2026年3月卒予定' }],
+          certifications: ['TOEIC 860点', '日商簿記2級'],
+          strengths: ['学業成績優秀（GPA 3.6/4.0）', 'プロダクト研究会代表としてのリーダーシップ', 'インターンでの実務経験'],
+          motivationKeywords: ['成長機会', '若手抜擢', 'ユーザー価値'],
+          attractAngleHints: ['学業×実践の両立 → 成長速度の速さを訴求', 'GPA 3.6 → 学習意欲と能力の高さの証拠'],
+        },
+      },
+    ],
     applications: [
       {
         id: 'app_004',

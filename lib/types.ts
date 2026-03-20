@@ -196,6 +196,32 @@ export interface Application {
   candidateCard?: CandidateCard
 }
 
+export type DocumentType = 'resume' | 'cv' | 'entry_sheet' | 'portfolio' | 'other'
+export type DocumentParseStatus = 'pending' | 'parsing' | 'parsed' | 'error'
+
+export interface ParsedDocumentData {
+  summary: string
+  keySkills: string[]
+  careerHistory: { company: string; role: string; period: string; highlights: string[] }[]
+  education: { school: string; faculty: string; year: string }[]
+  certifications: string[]
+  strengths: string[]
+  motivationKeywords: string[]
+  attractAngleHints: string[]
+}
+
+export interface UploadedDocument {
+  id: string
+  candidateId: string
+  type: DocumentType
+  fileName: string
+  fileSize: string
+  uploadedAt: string
+  uploadedBy: string
+  parseStatus: DocumentParseStatus
+  parsedData?: ParsedDocumentData
+}
+
 export interface Candidate {
   id: string
   tenantId: string
@@ -212,6 +238,7 @@ export interface Candidate {
   createdAt: string
   avatarInitials: string
   avatarColor: string
+  documents?: UploadedDocument[]
   // 新卒固有フィールド
   hiringType?: HiringType
   university?: string

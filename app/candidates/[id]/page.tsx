@@ -18,6 +18,7 @@ import {
   User,
   Brain,
   GraduationCap,
+  Upload,
 } from 'lucide-react'
 import { getCandidateById, getStageColor, getStageLabel, getSignalStrengthColor, getSignalStrengthLabel } from '@/lib/mock-data'
 
@@ -92,6 +93,10 @@ export default function CandidateDetailPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            <Link href={`/candidates/${id}/documents`} className="btn-secondary">
+              <Upload className="w-4 h-4 text-teal-500" />
+              書類管理
+            </Link>
             <Link href={`/candidates/${id}/signal-input`} className="btn-secondary">
               <Brain className="w-4 h-4 text-violet-500" />
               シグナル入力
@@ -245,6 +250,51 @@ export default function CandidateDetailPage() {
                 </div>
               )}
 
+              {/* Documents */}
+              {candidate.documents && candidate.documents.length > 0 && (
+                <div className="card p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="section-title mb-0 flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-teal-500" />
+                      アップロード書類
+                    </h2>
+                    <Link href={`/candidates/${id}/documents`} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                      書類管理 →
+                    </Link>
+                  </div>
+                  <div className="space-y-2">
+                    {candidate.documents.map((doc) => (
+                      <div key={doc.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
+                        <FileText className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-800 truncate">{doc.fileName}</p>
+                          <p className="text-[10px] text-gray-400">{doc.fileSize} — {doc.uploadedAt}</p>
+                        </div>
+                        {doc.parseStatus === 'parsed' && (
+                          <span className="badge bg-emerald-50 text-emerald-600 text-[10px]">AI解析済</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {/* AI抽出スキル（書類から） */}
+                  {candidate.documents.some(d => d.parsedData) && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="label mb-1.5">書類から抽出したスキル</p>
+                      <div className="flex flex-wrap gap-1">
+                        {[...new Set(candidate.documents.flatMap(d => d.parsedData?.keySkills ?? []))].slice(0, 8).map((skill, i) => (
+                          <span key={i} className="badge bg-blue-50 text-blue-600 text-[10px]">{skill}</span>
+                        ))}
+                        {[...new Set(candidate.documents.flatMap(d => d.parsedData?.keySkills ?? []))].length > 8 && (
+                          <Link href={`/candidates/${id}/documents`} className="badge bg-gray-50 text-gray-500 text-[10px]">
+                            +{[...new Set(candidate.documents.flatMap(d => d.parsedData?.keySkills ?? []))].length - 8}件
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Attract Strategy Summary */}
               {app?.attractStrategy && (
                 <div className="card p-5">
@@ -315,6 +365,11 @@ export default function CandidateDetailPage() {
                   <Link href={`/candidates/${id}/brief`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                     <FileText className="w-4 h-4 text-indigo-500" />
                     <span className="text-sm text-gray-700">面接官ブリーフ</span>
+                    <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
+                  </Link>
+                  <Link href={`/candidates/${id}/documents`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
+                    <Upload className="w-4 h-4 text-indigo-500" />
+                    <span className="text-sm text-gray-700">書類管理・AI解析</span>
                     <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
                   </Link>
                 </div>
