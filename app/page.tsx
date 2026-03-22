@@ -296,7 +296,7 @@ export default function Dashboard() {
           </div>
           <div>
             <p className="text-sm font-bold text-white">今月のAI業務効率化レポート</p>
-            <p className="text-xs text-indigo-200">カケハシOS AIによる自動化で採用担当の工数を削減しています</p>
+            <p className="text-xs text-indigo-200">ATTRACT AIによる自動化で採用担当の工数を削減しています</p>
           </div>
         </div>
         <div className="flex items-center gap-6">

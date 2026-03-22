@@ -532,7 +532,7 @@ export default function SignalInputPage() {
                       </div>
                       <ArrowRight className="w-5 h-5 text-indigo-300" />
                       <div className="text-center">
-                        <p className="text-xs text-indigo-200">カケハシOS</p>
+                        <p className="text-xs text-indigo-200">ATTRACT</p>
                         <p className="text-2xl font-bold text-yellow-300">~10秒</p>
                       </div>
                     </div>

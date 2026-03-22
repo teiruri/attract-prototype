@@ -191,7 +191,7 @@ export default function JobsPage() {
             <div className="flex items-start gap-2">
               <Sparkles className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-indigo-800 mb-1">カケハシOS の効果を最大化</p>
+                <p className="text-xs font-semibold text-indigo-800 mb-1">ATTRACT の効果を最大化</p>
                 <p className="text-xs text-indigo-600 leading-relaxed">
                   各求人に「企業魅力プロファイル」を設定することで、AIが生成するフィードバックレターやAttractプランの精度が大幅に向上します。
                 </p>

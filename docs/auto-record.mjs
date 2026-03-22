@@ -1,5 +1,5 @@
 /**
- * カケハシOS チュートリアル動画 自動録画スクリプト v8
+ * ATTRACT チュートリアル動画 自動録画スクリプト v8
  * - 12シーン構成（スカウトメール除外）
  * - Windows風矢印カーソル
  * - 字幕タイムスタンプ基準の精密カーソル同期
@@ -215,9 +215,9 @@ const SPLASH_HTML = `
   <div class="deco1"></div><div class="deco2"></div><div class="deco3"></div><div class="deco4"></div>
   <div class="container">
     <div class="logo-box"><div class="logo-icon">⚡</div></div>
-    <div class="brand">カケハシOS</div>
-    <div class="catch">～一人ひとりとのつながり強化が、採用成功を実現させる～</div>
-    <div class="by">株式会社カケハシスカイ</div>
+    <div class="brand">ATTRACT</div>
+    <div class="catch">～候補者を惹きつけ、選ばれる採用を実現する～</div>
+    <div class="by">KAKEHASHI SKY</div>
   </div>
 </body>
 </html>
@@ -237,15 +237,12 @@ const SCENES = [
     // 01 Login — 「メールアドレスとパスワードでログインします」(0.2-4.3s)
     name: '01_login',
     actions: async (page, dur) => {
-      // Pre-load: set initial background to prevent white flash
-      await page.setContent(`<html><body style="background:#f9fafb;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#6b7280;font-size:14px;">読み込み中...</body></html>`);
-      await sleep(200);
-
-      // Navigate to login and wait aggressively for React hydration
-      await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      // Navigate directly to login — no loading placeholder
+      // Pre-warming already cached the page, so it loads fast
+      await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle', timeout: 30000 });
       try { await page.waitForSelector('input[type="email"]', { state: 'visible', timeout: 15000 }); } catch {}
       try { await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: 10000 }); } catch {}
-      await sleep(1500); // Extra buffer for fonts + animations to settle
+      await sleep(800); // Buffer for fonts + animations to settle
       await injectCursorSystem(page);
 
       await timedSequence([
@@ -326,7 +323,7 @@ const SCENES = [
         // 0.2: 「ここで」→ cursor appears
         [0.2, async () => { await moveCursorTo(page, 400, 200); }],
 
-        // 1.1: 「カケハシOSの土台となる機能をご紹介します」→ cursor at heading
+        // 1.1: 「ATTRACTの土台となる機能をご紹介します」→ cursor at heading
         [1.1, async () => { await moveCursorToEl(page, 'h1'); }],
 
         // 4.8: 「REVP診断レポートです」→ highlight title
@@ -635,7 +632,7 @@ const SCENES = [
       await navigateTo(page, BASE_URL, 'h1');
 
       await timedSequence([
-        // 0.2: 「カケハシOSは」→ cursor at logo
+        // 0.2: 「ATTRACTは」→ cursor at logo
         [0.2, async () => { await moveCursorTo(page, 180, 45); }],
 
         // 1.7: 「経験と勘にたよった採用活動から脱却し」→ sweep dashboard
@@ -654,7 +651,7 @@ const SCENES = [
         [10.4, async () => { await smoothScroll(page, 700); }],
         [11.0, async () => { await moveCursorTo(page, 600, 450); }],
 
-        // 13.5: 「カケハシOSで実現しましょう」→ back to top
+        // 13.5: 「ATTRACTで実現しましょう」→ back to top
         [13.5, async () => { await smoothScroll(page, 0); }],
         [14.0, async () => { await moveCursorTo(page, 400, 300); }],
 
@@ -668,7 +665,7 @@ const SCENES = [
 // ─── Main Recording ───
 
 (async () => {
-  console.log('🎬 カケハシOS チュートリアル動画 自動録画開始 (v8)\n');
+  console.log('🎬 ATTRACT チュートリアル動画 自動録画開始 (v8)\n');
   console.log('  12シーン / 矢印カーソル / タイムスタンプ同期 / 赤枠ハイライト\n');
 
   // Get actual audio durations

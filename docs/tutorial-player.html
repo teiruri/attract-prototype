@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ATTRACT チュートリアル撮影コンソール</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans JP', 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 18px;
+      color: #818cf8;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-bar {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .status-bar .current {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .status-bar .time {
+      font-size: 13px;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+    }
+    .scene-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .scene {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .scene:hover { border-color: #6366f1; background: #1e293b; }
+    .scene.active { border-color: #6366f1; background: #312e81; }
+    .scene.playing { border-color: #22c55e; background: #14532d; }
+    .scene.done { opacity: 0.5; }
+    .scene-num {
+      width: 32px; height: 32px;
+      background: #334155;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .scene.active .scene-num { background: #6366f1; }
+    .scene.playing .scene-num { background: #22c55e; color: #000; }
+    .scene-content { flex: 1; }
+    .scene-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+    .scene-script {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.6;
+      display: none;
+    }
+    .scene.active .scene-script,
+    .scene.playing .scene-script { display: block; }
+    .scene-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    button {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #6366f1; }
+    button.stop { background: #dc2626; }
+    button.stop:hover { background: #ef4444; }
+    button.next { background: #059669; }
+    button.next:hover { background: #10b981; }
+    .ops {
+      font-size: 11px;
+      color: #fbbf24;
+      margin-top: 6px;
+      padding: 6px 8px;
+      background: rgba(251, 191, 36, 0.1);
+      border-radius: 6px;
+      display: none;
+    }
+    .scene.active .ops,
+    .scene.playing .ops { display: block; }
+    .hotkey-hint {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .hotkey-hint kbd {
+      background: #334155;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎬 ATTRACT チュートリアル撮影コンソール</h1>
+
+  <div class="status-bar">
+    <span class="current" id="currentScene">シーンを選択してください</span>
+    <span class="time" id="timer">00:00 / --:--</span>
+  </div>
+
+  <div class="scene-list" id="sceneList"></div>
+
+  <div class="hotkey-hint">
+    <kbd>Space</kbd> 再生/停止 &nbsp; <kbd>→</kbd> 次のシーン &nbsp; <kbd>←</kbd> 前のシーン &nbsp; <kbd>R</kbd> 現在のシーンを再再生
+  </div>
+
+  <script>
+    const SCENES = [
+      {
+        num: 0,
+        title: "オープニング（30秒）",
+        audio: "tutorial-audio/00_opening.mp3",
+        script: "「優秀な人材に出会えたのに、辞退されてしまった」→ ATTRACTの概要紹介",
+        ops: "【操作なし】タイトル画面 or ダッシュボード待機"
+      },
+      {
+        num: 1,
+        title: "ダッシュボード（60秒）",
+        audio: "tutorial-audio/01_dashboard.mp3",
+        script: "KPI4つ → 要対応アクション → パイプライン → 候補者一覧",
+        ops: "【操作】① トップページ表示 → ② KPIカード4つをゆっくり見せる → ③ 「要対応アクション」をスクロール → ④ アクション項目をクリック"
+      },
+      {
+        num: 2,
+        title: "候補者を登録する（60秒）",
+        audio: "tutorial-audio/02_register_candidate.mp3",
+        script: "候補者一覧 → 登録フォーム → 中途/新卒切替 → 登録完了",
+        ops: "【操作】① サイドバー「候補者管理」 → ② 「候補者を登録」ボタン → ③ 「中途」選択→フォーム見せる → ④ 「新卒」に切替→学歴項目が出る → ⑤ 登録→成功バナー"
+      },
+      {
+        num: 3,
+        title: "書類アップロード → AI解析（90秒）★",
+        audio: "tutorial-audio/03_document_upload.mp3",
+        script: "書類管理 → アップロード → 6ステップ解析 → 結果表示 → AI統合ビュー",
+        ops: "【操作】① 候補者一覧→田中美咲→詳細 → ② 「書類管理」ボタン → ③ 「書類をアップロード」→モーダル → ④ 書類タイプ選択 → ⑤ AI解析アニメーション → ⑥ 結果表示（スキル・経歴） → ⑦ 「AI統合ビュー」タブ切替"
+      },
+      {
+        num: 4,
+        title: "面接メモからシグナル抽出（90秒）★",
+        audio: "tutorial-audio/04_signal_extraction.mp3",
+        script: "メモ入力 → AI抽出 → キャリア価値観・反応・懸念 → エネルギーレベル",
+        ops: "【操作】① パンくず→候補者詳細→「シグナル入力」 → ② 「デモデータを入力」ボタン → ③ メモ内容を軽く見せる → ④ 「AIでシグナルを抽出」→アニメーション → ⑤ 結果をスクロールで順に見せる → ⑥ 価値観セクションを展開 → ⑦ 推奨アクションを見せる"
+      },
+      {
+        num: 5,
+        title: "Attract戦略ボード（60秒）★",
+        audio: "tutorial-audio/05_attract_strategy.mp3",
+        script: "コアアングル → フィット分析 → 未伝達ポイント → ステップ別アプローチ",
+        ops: "【操作】① 「Attractプランを更新」リンク → ② コアアングル（紫エリア）を見せる → ③ 「刺さる訴求ポイント」スクロール → ④ 「まだ伝えていないこと」スクロール → ⑤ 「ステップ別アプローチ」タイムライン → ⑥ 「次回面接プラン」を見せる"
+      },
+      {
+        num: 6,
+        title: "フィードバックレター生成（60秒）",
+        audio: "tutorial-audio/06_feedback_letter.mp3",
+        script: "面接選択 → レター生成 → プレビュー → 編集 → 送付",
+        ops: "【操作】① 候補者詳細→「フィードバックレター」 → ② 左側で面接を選択 → ③ 「レターを生成」ボタン → ④ プレビュー表示（ゆっくりスクロール） → ⑤ 「編集」タブに切替 → ⑥ 「送付済みにする」ボタン"
+      },
+      {
+        num: 7,
+        title: "面接官ブリーフィングシート（60秒）",
+        audio: "tutorial-audio/07_interviewer_brief.mp3",
+        script: "申し送り事項 → キーメッセージ → トーク例 → コピー/送付",
+        ops: "【操作】① 候補者詳細→「面接官ブリーフ」 → ② ヘッダー（面接日・面接官）を見せる → ③ ⚡黄色い申し送り事項を見せる → ④ キーメッセージをスクロール → ⑤ トーク例を見せる → ⑥ 「コピー」→「面接官に送付」ボタン"
+      },
+      {
+        num: 8,
+        title: "エンディング（30秒）",
+        audio: "tutorial-audio/08_ending.mp3",
+        script: "まとめ：勘→データ、1時間/人の削減、選ばれる採用へ",
+        ops: "【操作】ダッシュボードに戻り全体を俯瞰"
+      },
+    ];
+
+    let currentIdx = -1;
+    let audio = null;
+    let timerInterval = null;
+
+    function renderScenes() {
+      const list = document.getElementById('sceneList');
+      list.innerHTML = SCENES.map((s, i) => `
+        <div class="scene" id="scene-${i}" onclick="selectScene(${i})">
+          <div class="scene-num">${s.num}</div>
+          <div class="scene-content">
+            <div class="scene-title">${s.title}</div>
+            <div class="scene-script">${s.script}</div>
+            <div class="ops">🎮 ${s.ops}</div>
+          </div>
+          <div class="scene-actions">
+            <button onclick="event.stopPropagation(); playScene(${i})">▶ 再生</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectScene(idx) {
+      document.querySelectorAll('.scene').forEach(el => el.classList.remove('active'));
+      document.getElementById(`scene-${idx}`).classList.add('active');
+      currentIdx = idx;
+      document.getElementById('currentScene').textContent =
+        `シーン ${SCENES[idx].num}: ${SCENES[idx].title}`;
+    }
+
+    function playScene(idx) {
+      if (audio) { audio.pause(); audio = null; }
+      clearInterval(timerInterval);
+
+      document.querySelectorAll('.scene').forEach(el => {
+        el.classList.remove('playing');
+        el.classList.remove('active');
+      });
+      const el = document.getElementById(`scene-${idx}`);
+      el.classList.add('playing');
+      currentIdx = idx;
+
+      document.getElementById('currentScene').textContent =
+        `▶ 再生中: シーン ${SCENES[idx].num} — ${SCENES[idx].title}`;
+
+      audio = new Audio(SCENES[idx].audio);
+      audio.play();
+
+      timerInterval = setInterval(() => {
+        if (audio) {
+          const cur = formatTime(audio.currentTime);
+          const dur = formatTime(audio.duration || 0);
+          document.getElementById('timer').textContent = `${cur} / ${dur}`;
+        }
+      }, 200);
+
+      audio.onended = () => {
+        clearInterval(timerInterval);
+        el.classList.remove('playing');
+        el.classList.add('done');
+        document.getElementById('currentScene').textContent =
+          `✅ シーン ${SCENES[idx].num} 完了 — 次: ${idx < SCENES.length - 1 ? 'シーン ' + SCENES[idx+1].num : '撮影終了！'}`;
+
+        if (idx < SCENES.length - 1) {
+          selectScene(idx + 1);
+        }
+      };
+    }
+
+    function stopAudio() {
+      if (audio) { audio.pause(); audio = null; }
+      clearInterval(timerInterval);
+      document.querySelectorAll('.scene').forEach(el => el.classList.remove('playing'));
+      document.getElementById('currentScene').textContent = '⏸ 停止';
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    // キーボードショートカット
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (audio && !audio.paused) {
+          stopAudio();
+        } else if (currentIdx >= 0) {
+          playScene(currentIdx);
+        }
+      }
+      if (e.code === 'ArrowRight' && currentIdx < SCENES.length - 1) {
+        stopAudio();
+        selectScene(currentIdx + 1);
+      }
+      if (e.code === 'ArrowLeft' && currentIdx > 0) {
+        stopAudio();
+        selectScene(currentIdx - 1);
+      }
+      if (e.code === 'KeyR' && currentIdx >= 0) {
+        playScene(currentIdx);
+      }
+    });
+
+    renderScenes();
+  </script>
+</body>
+</html>
