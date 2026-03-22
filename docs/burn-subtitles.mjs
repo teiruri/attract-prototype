@@ -16,8 +16,9 @@ const FONT_PATH = "C\\:/Windows/Fonts/meiryo.ttc";
 
 const SCENES = [
   '00_opening', '01_login', '02_dashboard', '03_revp_report',
-  '04_register_candidate', '05_scout_mail', '06_document_upload', '07_signal_extraction',
-  '08_ai_interview', '09_attract_strategy', '10_feedback_letter', '11_interviewer_brief', '12_ending',
+  '04_register_candidate', '05_document_upload', '06_signal_extraction',
+  '07_ai_interview', '08_attract_strategy', '09_feedback_letter',
+  '10_interviewer_brief', '11_ending',
 ];
 
 function parseSrt(srtPath) {
@@ -110,7 +111,7 @@ if (sceneOutputs.length > 0) {
   const concatFile = path.join(VIDEO_DIR, 'concat_list.txt');
   fs.writeFileSync(concatFile, sceneOutputs.map(f => `file '${f.replace(/\\/g, '/')}'`).join('\n'));
 
-  const finalOutput = path.join(VIDEO_DIR, 'ATTRACT_tutorial_complete.mp4');
+  const finalOutput = path.join(VIDEO_DIR, 'KakehashiOS_tutorial_complete.mp4');
   const concatCmd = `"${FFMPEG}" -y -f concat -safe 0 -i "${concatFile}" -c copy "${finalOutput}"`;
 
   console.log('\n🎬 Concatenating final video...');

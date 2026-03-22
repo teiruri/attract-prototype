@@ -127,11 +127,7 @@ export default function CandidateDetailPage() {
               <FileText className="w-4 h-4" />
               面接官ブリーフ
             </Link>
-            <Link href={`/candidates/${id}/scout-mail`} className="btn-secondary">
-              <Mail className="w-4 h-4 text-violet-500" />
-              スカウトメール
-            </Link>
-            <Link href={`/candidates/${id}/feedback-letter`} className="btn-primary">
+<Link href={`/candidates/${id}/feedback-letter`} className="btn-primary">
               <Mail className="w-4 h-4" />
               フィードバックレター
             </Link>
