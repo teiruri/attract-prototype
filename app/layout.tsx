@@ -3,7 +3,7 @@ import './globals.css'
 import LayoutShell from '@/components/LayoutShell'
 
 export const metadata: Metadata = {
-  title: 'ATTRACT — AI採用ストーリー設計プラットフォーム | by カケハシスカイ',
+  title: 'カケハシOS — AI採用ストーリー設計プラットフォーム | by 株式会社カケハシスカイ',
   description: '1to1 AI Recruitment Attraction Orchestration Platform — 候補者シグナルに基づくパーソナライズされた採用コミュニケーションを実現',
 }
 

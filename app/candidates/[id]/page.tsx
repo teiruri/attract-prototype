@@ -111,6 +111,10 @@ export default function CandidateDetailPage() {
               <Upload className="w-4 h-4 text-teal-500" />
               書類管理
             </Link>
+            <Link href={`/candidates/${id}/ai-interview`} className="btn-secondary">
+              <Brain className="w-4 h-4 text-violet-500" />
+              AI面接
+            </Link>
             <Link href={`/candidates/${id}/signal-input`} className="btn-secondary">
               <Brain className="w-4 h-4 text-violet-500" />
               シグナル入力
@@ -122,6 +126,10 @@ export default function CandidateDetailPage() {
             <Link href={`/candidates/${id}/brief`} className="btn-secondary">
               <FileText className="w-4 h-4" />
               面接官ブリーフ
+            </Link>
+            <Link href={`/candidates/${id}/scout-mail`} className="btn-secondary">
+              <Mail className="w-4 h-4 text-violet-500" />
+              スカウトメール
             </Link>
             <Link href={`/candidates/${id}/feedback-letter`} className="btn-primary">
               <Mail className="w-4 h-4" />

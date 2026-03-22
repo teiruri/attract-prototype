@@ -39,8 +39,8 @@ export default function LoginPage() {
               <Zap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900 leading-tight">ATTRACT</p>
-              <p className="text-xs text-gray-400 leading-tight">by カケハシスカイ</p>
+              <p className="text-xl font-bold text-gray-900 leading-tight">カケハシOS</p>
+              <p className="text-xs text-gray-400 leading-tight">～一人ひとりとのつながり強化が、採用成功を実現させる～</p>
             </div>
           </div>
 

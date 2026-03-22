@@ -649,14 +649,14 @@ export default function RevpReportPage() {
               </p>
             </div>
 
-            {/* ATTRACT連携 */}
+            {/* カケハシOS連携 */}
             <div className="card p-5 border-2 border-indigo-200">
               <div className="flex items-center gap-2 mb-3">
                 <Target className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-sm font-semibold text-indigo-900">ATTRACTへの反映</h3>
+                <h3 className="text-sm font-semibold text-indigo-900">カケハシOSへの反映</h3>
               </div>
               <p className="text-xs text-gray-600 mb-3">
-                このREVP診断結果は、ATTRACTの以下の機能に自動反映されます：
+                このREVP診断結果は、カケハシOSの以下の機能に自動反映されます：
               </p>
               <div className="grid grid-cols-3 gap-3">
                 {[
