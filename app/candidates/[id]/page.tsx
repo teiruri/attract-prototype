@@ -123,6 +123,10 @@ export default function CandidateDetailPage() {
               <Sparkles className="w-4 h-4 text-indigo-500" />
               Attract戦略
             </Link>
+            <Link href={`/candidates/${id}/development`} className="btn-secondary">
+              <Target className="w-4 h-4 text-amber-500" />
+              育成フィードバック
+            </Link>
             <Link href={`/candidates/${id}/brief`} className="btn-secondary">
               <FileText className="w-4 h-4" />
               面接官ブリーフ

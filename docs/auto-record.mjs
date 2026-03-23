@@ -223,7 +223,7 @@ const SPLASH_HTML = `
 </html>
 `;
 
-// ─── Scene Definitions (12 scenes, no scout mail) ───
+// ─── Scene Definitions (16 scenes) ───
 const SCENES = [
   {
     // 00 Opening — スプラッシュ画面
@@ -237,12 +237,14 @@ const SCENES = [
     // 01 Login — 「メールアドレスとパスワードでログインします」(0.2-4.3s)
     name: '01_login',
     actions: async (page, dur) => {
-      // Navigate directly to login — no loading placeholder
-      // Pre-warming already cached the page, so it loads fast
+      // Start with white background matching login page — prevents any loading flash
+      await page.setContent(`<!DOCTYPE html><html><body style="margin:0;background:#fff;width:1440px;height:900px;"></body></html>`);
+      // Navigate in background: fetch page while showing white bg
       await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle', timeout: 30000 });
       try { await page.waitForSelector('input[type="email"]', { state: 'visible', timeout: 15000 }); } catch {}
       try { await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: 10000 }); } catch {}
-      await sleep(800); // Buffer for fonts + animations to settle
+      // Wait for fonts, animations, and full hydration to settle
+      await sleep(1500);
       await injectCursorSystem(page);
 
       await timedSequence([
@@ -547,38 +549,60 @@ const SCENES = [
     },
   },
   {
-    // 09 Feedback Letter (was 10)
-    // Subtitles: 0.2-1.40 / 1.46-4.91 / 4.97-6.77 / 6.83-11.83 / 11.89-14.89 / 14.95-17.80 / 17.86-21.76
-    name: '09_feedback_letter',
+    // 09 Development Feedback (NEW)
+    name: '09_development',
+    actions: async (page, dur) => {
+      await navigateTo(page, `${BASE_URL}/candidates/cand_001/development`, 'h1, h2');
+
+      await timedSequence([
+        // 0.2: 「候補者育成フィードバック機能です」→ title highlight
+        [0.2, async () => {
+          await pointAndClick(page, 'h1, h2', { click: false, delay: 300, highlightDuration: 2500 });
+        }],
+
+        // 2.5: 「内定を出すにあたって…成長が必要か」→ gap analysis section
+        [2.5, async () => { await moveCursorTo(page, 500, 350); }],
+        [4.0, async () => { await moveCursorTo(page, 700, 380); }],
+
+        // 6.0: 「何が不足しているかを…自動で分析」→ gap bars
+        [6.0, async () => { await smoothScroll(page, 200); }],
+        [7.0, async () => { await moveCursorTo(page, 600, 400); }],
+
+        // 9.0: 「どう伝えれば候補者に前向きに受け止めてもらえるか」→ communication guide
+        [9.0, async () => { await smoothScroll(page, 450); }],
+        [10.0, async () => { await moveCursorTo(page, 500, 420); }],
+        [12.0, async () => { await moveCursorTo(page, 700, 440); }],
+
+        // 14.0: 「伝え方のガイドまでAIが提案」→ NG/OK examples
+        [14.0, async () => { await smoothScroll(page, 650); }],
+        [15.0, async () => { await moveCursorTo(page, 600, 430); }],
+
+        // 17.0: 「建設的なフィードバックを行える」→ action plan
+        [17.0, async () => { await smoothScroll(page, 800); }],
+        [18.0, async () => { await moveCursorTo(page, 500, 450); }],
+        [19.5, async () => { await hideCursor(page); }],
+      ], dur);
+    },
+  },
+  {
+    // 10 Feedback Letter
+    name: '10_feedback_letter',
     actions: async (page, dur) => {
       await navigateTo(page, `${BASE_URL}/candidates/cand_001/feedback-letter`, 'h1, h2');
 
       await timedSequence([
-        // 0.2: 「面接を終えたら」→ cursor at top
         [0.2, async () => { await moveCursorTo(page, 400, 200); }],
-
-        // 1.5: 「合格者ひとりひとりに合わせた合格通知レター」→ cursor at letter
         [1.5, async () => { await moveCursorTo(page, 600, 350); }],
         [3.0, async () => { await moveCursorTo(page, 700, 380); }],
-
-        // 5.0: 「AIが自動で作成」→ highlight AI button
         [5.0, async () => {
           await pointAndClick(page, 'button:has-text("生成"), button:has-text("AI"), button:has-text("作成")', { click: false, delay: 300, highlightDuration: 2000 });
         }],
-
-        // 6.8: 「面接での会話やアンケート内容なども踏まえて」→ cursor at sources
         [6.8, async () => { await smoothScroll(page, 200); }],
         [7.5, async () => { await moveCursorTo(page, 500, 400); }],
         [9.5, async () => { await moveCursorTo(page, 700, 420); }],
-
-        // 11.9: 「この会社は自分をちゃんと見てくれている」→ personalized text
         [11.9, async () => { await smoothScroll(page, 350); }],
         [12.5, async () => { await moveCursorTo(page, 600, 430); }],
-
-        // 15.0: 「という印象を与えることにつながります」
         [15.0, async () => { await moveCursorTo(page, 700, 400); }],
-
-        // 17.9: 「システムからそのままメールで送信」→ highlight send button
         [17.9, async () => { await smoothScroll(page, 500); }],
         [18.5, async () => {
           await pointAndClick(page, 'button:has-text("送信"), button:has-text("メール")', { click: false, delay: 300, highlightDuration: 2500 });
@@ -588,74 +612,144 @@ const SCENES = [
     },
   },
   {
-    // 10 Interviewer Brief (was 11)
-    // Subtitles: 0.2-4.82 / 4.88-7.68 / 7.74-11.04 / 11.10-13.73 / 13.79-17.59 / 17.65-20.61 / 20.67-21.95
-    name: '10_interviewer_brief',
+    // 11 Interviewer Brief
+    name: '11_interviewer_brief',
     actions: async (page, dur) => {
       await navigateTo(page, `${BASE_URL}/candidates/cand_001/brief`, 'h1, h2');
 
       await timedSequence([
-        // 0.2: 「次回面接官向けのブリーフィングシートも自動で生成」→ title + highlight
         [0.2, async () => {
           await pointAndClick(page, 'h1, h2', { click: false, delay: 300, highlightDuration: 2500 });
         }],
-
-        // 4.9: 「面接録音テキストや評価者コメント」→ source data section
         [4.9, async () => { await moveCursorTo(page, 500, 350); }],
-
-        // 7.7: 「候補者アンケートからAIが作成するため」→ AI section
         [7.7, async () => { await moveCursorTo(page, 700, 370); }],
         [9.0, async () => { await smoothScroll(page, 250); }],
-
-        // 11.1: 「面接官の工数はほぼかかりません」→ sweep auto-fields
         [11.1, async () => { await moveCursorTo(page, 400, 400); }],
         [12.5, async () => { await moveCursorTo(page, 800, 400); }],
-
-        // 13.8: 「前回の面接内容のもうしおくり…候補者は」→ handover section
         [13.8, async () => { await smoothScroll(page, 450); }],
         [14.5, async () => { await moveCursorTo(page, 500, 420); }],
         [16.0, async () => { await moveCursorTo(page, 700, 440); }],
-
-        // 17.7: 「この会社はちゃんと連携が取れている」→ connection area
         [17.7, async () => { await moveCursorTo(page, 600, 460); }],
-
-        // 20.7: 「と感じてくれます」→ fade
         [20.7, async () => { await hideCursor(page); }],
       ], dur);
     },
   },
   {
-    // 11 Ending (was 12)
-    // Subtitles: 0.2-1.64 / 1.70-4.44 / 4.50-8.25 / 8.31-10.33 / 10.39-13.42 / 13.48-15.93 / 15.99-17.95
-    name: '11_ending',
+    // 12 Employee Talent Pool (NEW)
+    name: '12_employee_pool',
+    actions: async (page, dur) => {
+      await navigateTo(page, `${BASE_URL}/talent-pool/employees`, 'h1, h2');
+
+      await timedSequence([
+        // 0.2: 「社員タレントプールです」→ title highlight
+        [0.2, async () => {
+          await pointAndClick(page, 'h1, h2', { click: false, delay: 300, highlightDuration: 2500 });
+        }],
+
+        // 2.5: 「部署遍歴や役職推移、表彰歴とともに管理」→ stats bar
+        [2.5, async () => { await moveCursorTo(page, 400, 200); }],
+        [4.0, async () => { await moveCursorTo(page, 800, 200); }],
+
+        // 5.5: 「面接時に、候補者と似た経歴の社員を紹介」→ employee cards
+        [5.5, async () => { await moveCursorTo(page, 400, 400); }],
+        [7.0, async () => { await moveCursorTo(page, 700, 400); }],
+
+        // 9.0: 「合格レターで将来の同僚として紹介」→ scroll to more cards
+        [9.0, async () => { await smoothScroll(page, 300); }],
+        [10.0, async () => { await moveCursorTo(page, 500, 420); }],
+
+        // 12.0: 「候補者の入社意欲を高める」→ detail expand
+        [12.0, async () => { await smoothScroll(page, 500); }],
+        [13.0, async () => { await moveCursorTo(page, 600, 450); }],
+        [15.0, async () => { await hideCursor(page); }],
+      ], dur);
+    },
+  },
+  {
+    // 13 Candidate Talent Pool (NEW)
+    name: '13_candidate_pool',
+    actions: async (page, dur) => {
+      await navigateTo(page, `${BASE_URL}/talent-pool/candidates`, 'h1, h2');
+
+      await timedSequence([
+        // 0.2: 「応募者タレントプールです」→ title highlight
+        [0.2, async () => {
+          await pointAndClick(page, 'h1, h2', { click: false, delay: 300, highlightDuration: 2500 });
+        }],
+
+        // 2.5: 「タイミングや条件が合わなかったものの」→ stats bar
+        [2.5, async () => { await moveCursorTo(page, 400, 200); }],
+
+        // 4.5: 「優秀な候補者をリストとしてストック」→ candidate cards
+        [4.5, async () => { await moveCursorTo(page, 500, 380); }],
+        [6.0, async () => { await moveCursorTo(page, 800, 380); }],
+
+        // 8.0: 「選考時の情報やコミュニケーション履歴を保持」→ scroll to details
+        [8.0, async () => { await smoothScroll(page, 300); }],
+        [9.0, async () => { await moveCursorTo(page, 600, 400); }],
+
+        // 11.0: 「しかるべきタイミングで定期連絡」→ contact schedule
+        [11.0, async () => { await smoothScroll(page, 500); }],
+        [12.0, async () => { await moveCursorTo(page, 500, 430); }],
+        [14.0, async () => { await moveCursorTo(page, 700, 450); }],
+        [15.5, async () => { await hideCursor(page); }],
+      ], dur);
+    },
+  },
+  {
+    // 14 Recruitment Summary (NEW)
+    name: '14_recruitment_summary',
+    actions: async (page, dur) => {
+      await navigateTo(page, `${BASE_URL}/recruitment-summary`, 'h1, h2');
+
+      await timedSequence([
+        // 0.2: 「採用活動総括の機能です」→ title highlight
+        [0.2, async () => {
+          await pointAndClick(page, 'h1, h2', { click: false, delay: 300, highlightDuration: 2500 });
+        }],
+
+        // 2.5: 「任意のタイミングでレポートを生成すると」→ generate button highlight
+        [2.5, async () => {
+          await pointAndClick(page, 'button:has-text("生成"), button:has-text("総括")', { click: true, delay: 400, highlightDuration: 2500 });
+        }],
+
+        // 5.5: 「求人ごとの応募者数や目標人数」→ progress summary
+        [5.5, async () => { await moveCursorTo(page, 500, 350); }],
+        [7.0, async () => { await moveCursorTo(page, 800, 350); }],
+
+        // 8.5: 「候補者のスキル傾向」→ profile analysis
+        [8.5, async () => { await smoothScroll(page, 400); }],
+        [9.5, async () => { await moveCursorTo(page, 600, 400); }],
+
+        // 11.0: 「面接官の所感やアンケート結果から」→ survey section
+        [11.0, async () => { await smoothScroll(page, 650); }],
+        [12.0, async () => { await moveCursorTo(page, 500, 420); }],
+
+        // 14.0: 「テコ入れすべき施策をAIが分析し、提案」→ AI recommendations
+        [14.0, async () => { await smoothScroll(page, 900); }],
+        [15.0, async () => { await moveCursorTo(page, 600, 430); }],
+        [17.0, async () => { await hideCursor(page); }],
+      ], dur);
+    },
+  },
+  {
+    // 15 Ending
+    name: '15_ending',
     actions: async (page, dur) => {
       await navigateTo(page, BASE_URL, 'h1');
 
       await timedSequence([
-        // 0.2: 「ATTRACTは」→ cursor at logo
         [0.2, async () => { await moveCursorTo(page, 180, 45); }],
-
-        // 1.7: 「経験と勘にたよった採用活動から脱却し」→ sweep dashboard
         [1.7, async () => { await moveCursorTo(page, 400, 250); }],
         [3.0, async () => { await moveCursorTo(page, 700, 250); }],
-
-        // 4.5: 「候補者ひとりひとりの心の動きをデータとして可視化」→ KPI area
         [4.5, async () => { await moveCursorTo(page, 500, 260); }],
         [6.5, async () => { await moveCursorTo(page, 900, 260); }],
-
-        // 8.3: 「チームで共有する仕組みです」→ task area
         [8.3, async () => { await smoothScroll(page, 350); }],
         [9.0, async () => { await moveCursorTo(page, 500, 400); }],
-
-        // 10.4: 「候補者をひきつけて選ばれる採用プロセスを」→ funnel
         [10.4, async () => { await smoothScroll(page, 700); }],
         [11.0, async () => { await moveCursorTo(page, 600, 450); }],
-
-        // 13.5: 「ATTRACTで実現しましょう」→ back to top
         [13.5, async () => { await smoothScroll(page, 0); }],
         [14.0, async () => { await moveCursorTo(page, 400, 300); }],
-
-        // 16.0: 「ご視聴ありがとうございました」→ fade
         [16.0, async () => { await hideCursor(page); }],
       ], dur);
     },
@@ -665,8 +759,8 @@ const SCENES = [
 // ─── Main Recording ───
 
 (async () => {
-  console.log('🎬 ATTRACT チュートリアル動画 自動録画開始 (v8)\n');
-  console.log('  12シーン / 矢印カーソル / タイムスタンプ同期 / 赤枠ハイライト\n');
+  console.log('🎬 ATTRACT チュートリアル動画 自動録画開始 (v9)\n');
+  console.log('  16シーン / 矢印カーソル / タイムスタンプ同期 / 赤枠ハイライト\n');
 
   // Get actual audio durations
   const DURATIONS = {};
@@ -687,7 +781,7 @@ const SCENES = [
   console.log('\n🔄 Pre-warming browser cache...');
   const warmCtx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ja-JP' });
   const warmPage = await warmCtx.newPage();
-  const warmUrls = ['/login', '/', '/settings/revp-report', '/candidates', '/candidates/cand_001/documents'];
+  const warmUrls = ['/login', '/', '/settings/revp-report', '/candidates', '/candidates/cand_001/documents', '/candidates/cand_001/development', '/talent-pool/employees', '/talent-pool/candidates', '/recruitment-summary'];
   for (const u of warmUrls) {
     try {
       await warmPage.goto(`${BASE_URL}${u}`, { waitUntil: 'networkidle', timeout: 20000 });
@@ -736,5 +830,5 @@ const SCENES = [
   }
 
   await browser.close();
-  console.log('\n🎬 全12シーン録画完了！次に burn-subtitles.mjs で字幕焼き込み＋結合してください');
+  console.log('\n🎬 全16シーン録画完了！次に burn-subtitles.mjs で字幕焼き込み＋結合してください');
 })();

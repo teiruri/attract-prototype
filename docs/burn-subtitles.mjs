@@ -17,8 +17,10 @@ const FONT_PATH = "C\\:/Windows/Fonts/meiryo.ttc";
 const SCENES = [
   '00_opening', '01_login', '02_dashboard', '03_revp_report',
   '04_register_candidate', '05_document_upload', '06_signal_extraction',
-  '07_ai_interview', '08_attract_strategy', '09_feedback_letter',
-  '10_interviewer_brief', '11_ending',
+  '07_ai_interview', '08_attract_strategy', '09_development',
+  '10_feedback_letter', '11_interviewer_brief',
+  '12_employee_pool', '13_candidate_pool',
+  '14_recruitment_summary', '15_ending',
 ];
 
 function parseSrt(srtPath) {

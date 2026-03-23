@@ -11,6 +11,9 @@ import {
   ChevronRight,
   Zap,
   BarChart3,
+  Building2,
+  UserCheck,
+  ClipboardList,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -18,6 +21,9 @@ const navItems = [
   { label: 'ダッシュボード', href: '/', icon: LayoutDashboard },
   { label: '候補者管理', href: '/candidates', icon: Users },
   { label: '求人管理', href: '/jobs', icon: Briefcase },
+  { label: '社員タレントプール', href: '/talent-pool/employees', icon: Building2 },
+  { label: '応募者タレントプール', href: '/talent-pool/candidates', icon: UserCheck },
+  { label: '採用活動総括', href: '/recruitment-summary', icon: ClipboardList },
   { label: '企業魅力設定', href: '/settings/attraction-profile', icon: Sparkles },
   { label: 'REVP診断レポート', href: '/settings/revp-report', icon: BarChart3 },
   { label: '設定', href: '/settings', icon: Settings },
