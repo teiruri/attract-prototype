@@ -327,7 +327,7 @@ export default function EmployeeTalentPoolPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">社員タレントプール</h1>
           <p className="text-sm text-gray-500 mt-1">
-            社員情報を活用し、候補者へのアトラクトに活かす
+            社員情報を活用し、候補者の志望度向上に活かす
           </p>
         </div>
       </div>

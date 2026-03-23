@@ -3,8 +3,8 @@ import './globals.css'
 import LayoutShell from '@/components/LayoutShell'
 
 export const metadata: Metadata = {
-  title: 'ATTRACT — AI採用ストーリー設計プラットフォーム | by カケハシスカイ',
-  description: '1to1 AI Recruitment Attraction Orchestration Platform — 候補者シグナルに基づくパーソナライズされた採用コミュニケーションを実現',
+  title: 'HR FARM — 応募者の志望度を耕し、採用確率を高める仕組み | by カケハシスカイ',
+  description: '1to1 AI Recruitment Platform — 応募者の志望度を耕し、採用確率を高める仕組み',
 }
 
 export default function RootLayout({

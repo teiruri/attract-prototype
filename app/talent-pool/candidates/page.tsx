@@ -131,7 +131,7 @@ const pooledCandidates: PooledCandidate[] = [
       date: '2026-04-15',
       method: 'メール + LinkedIn',
       talkingPoints: [
-        '新プロダクト「ATTRACT」のローンチ報告',
+        '新プロダクト「HR FARM」のローンチ報告',
         'PMチーム拡大中であることを伝える',
         'カジュアルランチの打診',
       ],

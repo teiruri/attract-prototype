@@ -1,5 +1,5 @@
 /**
- * ATTRACT チュートリアル動画 自動録画スクリプト v8
+ * HR FARM チュートリアル動画 自動録画スクリプト v10
  * - 12シーン構成（スカウトメール除外）
  * - Windows風矢印カーソル
  * - 字幕タイムスタンプ基準の精密カーソル同期
@@ -215,8 +215,8 @@ const SPLASH_HTML = `
   <div class="deco1"></div><div class="deco2"></div><div class="deco3"></div><div class="deco4"></div>
   <div class="container">
     <div class="logo-box"><div class="logo-icon">⚡</div></div>
-    <div class="brand">ATTRACT</div>
-    <div class="catch">～候補者を惹きつけ、選ばれる採用を実現する～</div>
+    <div class="brand">HR FARM</div>
+    <div class="catch">～応募者の志望度を耕し、採用確率を高める仕組み～</div>
     <div class="by">KAKEHASHI SKY</div>
   </div>
 </body>
@@ -759,7 +759,7 @@ const SCENES = [
 // ─── Main Recording ───
 
 (async () => {
-  console.log('🎬 ATTRACT チュートリアル動画 自動録画開始 (v9)\n');
+  console.log('🎬 HR FARM チュートリアル動画 自動録画開始 (v10)\n');
   console.log('  16シーン / 矢印カーソル / タイムスタンプ同期 / 赤枠ハイライト\n');
 
   // Get actual audio durations

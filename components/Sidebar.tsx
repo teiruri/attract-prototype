@@ -40,7 +40,7 @@ export default function Sidebar() {
           <Zap className="w-4 h-4 text-white" />
         </div>
         <div>
-          <p className="text-sm font-bold text-gray-900 leading-tight">ATTRACT</p>
+          <p className="text-sm font-bold text-gray-900 leading-tight">HR FARM</p>
           <p className="text-[10px] text-gray-400 leading-tight">by カケハシスカイ</p>
         </div>
       </div>

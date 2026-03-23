@@ -157,7 +157,7 @@ export default function EvpSurveyPage() {
             <span className="badge bg-emerald-100 text-emerald-700">カケハシスカイ連携</span>
           </div>
           <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-            カケハシスカイの「Recruiting-EVPサーベイ」を通じて収集したデータを、ATTRACTの企業魅力プロファイルに自動連携します。
+            カケハシスカイの「Recruiting-EVPサーベイ」を通じて収集したデータを、HR FARMの企業魅力プロファイルに自動連携します。
             社員・退職者・候補者の回答を基に、証拠に裏付けられたEVPを構築できます。
           </p>
         </div>
@@ -272,7 +272,7 @@ export default function EvpSurveyPage() {
                     <div>
                       <p className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
                         <Sparkles className="w-3 h-3 text-indigo-500" />
-                        ATTRACT EVP文（連携先）
+                        HR FARM EVP文（連携先）
                       </p>
                       <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200 mb-3">
                         <p className="text-xs text-indigo-800 leading-relaxed">{cat.evpDraft}</p>
@@ -298,10 +298,10 @@ export default function EvpSurveyPage() {
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-3">
               <Download className="w-4 h-4 text-indigo-600" />
-              <p className="text-sm font-bold text-gray-900">ATTRACTに取り込む</p>
+              <p className="text-sm font-bold text-gray-900">HR FARMに取り込む</p>
             </div>
             <p className="text-xs text-gray-500 leading-relaxed mb-4">
-              サーベイ結果をATTRACTの企業魅力プロファイルに反映します。既存のEVP設定はサーベイデータで上書き・強化されます。
+              サーベイ結果をHR FARMの企業魅力プロファイルに反映します。既存のEVP設定はサーベイデータで上書き・強化されます。
             </p>
 
             {importPhase === 'idle' && (
@@ -374,7 +374,7 @@ export default function EvpSurveyPage() {
             <div className="space-y-2">
               {[
                 { title: '証拠に裏付けられたEVP', desc: '実際の社員・退職者・候補者の声から生成されたEVPが採用訴求に使える' },
-                { title: 'AI出力の精度が上がる', desc: 'フィードバックレターとAttractプランの生成品質が大幅に向上' },
+                { title: 'AI出力の精度が上がる', desc: 'フィードバックレターとひきつけプランの生成品質が大幅に向上' },
                 { title: '訴求軸の優先順位が明確に', desc: 'スコアの高い項目から優先的に訴求することで承諾率が上がる' },
               ].map((b, i) => (
                 <div key={i} className="p-3 bg-white rounded-lg border border-indigo-100">
@@ -392,7 +392,7 @@ export default function EvpSurveyPage() {
               <div>
                 <p className="text-xs font-semibold text-amber-800 mb-1">ご注意</p>
                 <p className="text-xs text-amber-700 leading-relaxed">
-                  取り込み後はATTRACT内のEVP設定を確認・調整してから保存してください。
+                  取り込み後はHR FARM内のEVP設定を確認・調整してから保存してください。
                   サーベイデータはあくまで叩き台です。実際の採用コンセプトに合わせて編集を推奨します。
                 </p>
               </div>

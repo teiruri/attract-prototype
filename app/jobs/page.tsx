@@ -191,9 +191,9 @@ export default function JobsPage() {
             <div className="flex items-start gap-2">
               <Sparkles className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-indigo-800 mb-1">ATTRACT の効果を最大化</p>
+                <p className="text-xs font-semibold text-indigo-800 mb-1">HR FARM の効果を最大化</p>
                 <p className="text-xs text-indigo-600 leading-relaxed">
-                  各求人に「企業魅力プロファイル」を設定することで、AIが生成するフィードバックレターやAttractプランの精度が大幅に向上します。
+                  各求人に「企業魅力プロファイル」を設定することで、AIが生成するフィードバックレターやひきつけプランの精度が大幅に向上します。
                 </p>
                 <Link href="/settings/attraction-profile" className="text-xs text-indigo-700 font-medium mt-2 inline-flex items-center gap-1 hover:text-indigo-800">
                   企業魅力設定を確認する

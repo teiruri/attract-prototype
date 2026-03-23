@@ -113,7 +113,7 @@ if (sceneOutputs.length > 0) {
   const concatFile = path.join(VIDEO_DIR, 'concat_list.txt');
   fs.writeFileSync(concatFile, sceneOutputs.map(f => `file '${f.replace(/\\/g, '/')}'`).join('\n'));
 
-  const finalOutput = path.join(VIDEO_DIR, 'ATTRACT_tutorial_complete.mp4');
+  const finalOutput = path.join(VIDEO_DIR, 'HRFARM_tutorial_complete.mp4');
   const concatCmd = `"${FFMPEG}" -y -f concat -safe 0 -i "${concatFile}" -c copy "${finalOutput}"`;
 
   console.log('\n🎬 Concatenating final video...');
