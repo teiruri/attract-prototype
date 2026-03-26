@@ -10,7 +10,7 @@ export type InterviewStage =
   | 'interview_4'
   | 'interview_final'
 
-export type OutputType = 'match_analysis' | 'attract_story' | 'result_letter' | 'handover_note'
+export type OutputType = 'match_analysis' | 'attract_story' | 'result_letter' | 'handover_note' | 'personal_offer'
 export type OutputStatus = 'generating' | 'draft' | 'reviewed' | 'sent'
 export type CandidateStatus = 'active' | 'offered' | 'accepted' | 'rejected' | 'withdrawn' | 'on_hold'
 export type HiringType = 'new_graduate' | 'mid_career' | 'other'

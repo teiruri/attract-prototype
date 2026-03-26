@@ -1,6 +1,6 @@
 /**
  * Claude API を使用したAI生成モジュール
- * HR FARM MVP - マッチ分析、惹きつけストーリー、選考結果レター、面接申し送り
+ * HR FARM MVP - マッチ分析、惹きつけストーリー、選考結果レター、面接申し送り、個別オファー
  */
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
@@ -358,5 +358,76 @@ ${input.matchAnalysis ? `## マッチ分析\nスコア: ${input.matchAnalysis.ov
 `
 
   const result = await callClaude(systemPrompt, [{ role: 'user', content: userMessage }], 2000)
+  return JSON.parse(result)
+}
+
+// ============================================================
+// 個別オファー生成（エントリー→次ステップ参加促進）
+// ============================================================
+
+export interface PersonalOfferInput {
+  candidateName: string
+  candidateProfile: string
+  hiringType: 'new_graduate' | 'mid_career' | 'other'
+  nextStepType: string          // internship, info_session, casual_talk, office_visit, workshop
+  nextStepLabel: string         // インターンシップ, 説明会, カジュアル面談, オフィス見学, ワークショップ
+  jobTitle: string
+  companyProfile?: Record<string, unknown>
+  matchAnalysis?: MatchAnalysisResult
+}
+
+export interface PersonalOfferResult {
+  subject: string
+  body: string
+  appeal_points: string[]
+  personalized_reason: string
+  next_step_description: string
+  urgency_message: string
+  tone: string
+}
+
+export async function generatePersonalOffer(input: PersonalOfferInput): Promise<PersonalOfferResult> {
+  const systemPrompt = `あなたは「応募者体験を設計し、承諾率を高める」採用プラットフォームのAIです。エントリー段階の候補者に対して、次のステップ（${input.nextStepLabel}）への参加を促す個別オファーメッセージを作成してください。
+
+## 個別オファーの目的
+採用ファネルの最上流「応募→次ステップ参加」の転換率を高めることです。
+エントリーしたものの、説明会やインターンへの参加を迷っている候補者に対して、「自分のために用意された特別な機会」と感じてもらえるパーソナライズされたメッセージを届けます。
+
+## メッセージ設計の原則
+- 候補者の経歴・志向・関心に合わせた「参加すべき理由」を具体的に提示する
+- 一斉送信のテンプレートではなく、「自分宛て」だと感じられるパーソナライズ
+- ${input.hiringType === 'new_graduate' ? '新卒候補者には、成長機会・同期との出会い・リアルな仕事体験を強調' : '中途候補者には、キャリアの次のステージ・具体的な業務内容・カルチャーフィットを強調'}
+- 押しつけがましくなく、候補者の意思を尊重しつつも「行ってみたい」と思わせる
+- 次のステップで得られる具体的なメリットを明示する
+
+以下のJSON形式で回答してください:
+{
+  "subject": "メールの件名（候補者名を含めてパーソナルに）",
+  "body": "メール本文（400-600字。候補者に直接語りかける形式。改行は\\nで表現）",
+  "appeal_points": ["この候補者に響く参加メリット1", "メリット2", "メリット3"],
+  "personalized_reason": "この候補者が特にこの機会に参加すべき理由（1-2文）",
+  "next_step_description": "次のステップの内容と魅力を候補者視点で説明（2-3文）",
+  "urgency_message": "自然な形での参加促進メッセージ（席数限定、日程等）",
+  "tone": "warm"
+}
+
+JSONのみを返してください。`
+
+  const userMessage = `
+## 候補者: ${input.candidateName}
+${input.candidateProfile}
+
+## 採用種別: ${input.hiringType === 'new_graduate' ? '新卒採用' : input.hiringType === 'mid_career' ? '中途採用' : 'その他'}
+
+## 次のステップ: ${input.nextStepLabel}
+
+## 求人: ${input.jobTitle}
+
+${input.companyProfile ? `## 企業情報\n${JSON.stringify(input.companyProfile, null, 2)}` : ''}
+
+${input.matchAnalysis ? `## マッチ分析\nスコア: ${input.matchAnalysis.overall_match_score}/100\n${input.matchAnalysis.summary}` : ''}
+`
+
+  const result = await callClaude(systemPrompt, [{ role: 'user', content: userMessage }], 3000)
   return JSON.parse(result)
 }
