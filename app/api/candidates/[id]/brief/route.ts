@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate } = await req.json()
+    const { candidate, job } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -26,31 +26,27 @@ export async function POST(
 ステータス: ${candidate.status || ''}
 `.trim()
 
+    const jobInfo = `
+求人情報:
+ポジション: ${job?.title || '未設定'}
+部署: ${job?.department || '未設定'}
+職種: ${job?.position_type || '未設定'}
+求人概要: ${job?.description || '未設定'}
+必須要件: ${(job?.requirements || []).join(', ') || '未設定'}
+歓迎要件: ${(job?.preferred || []).join(', ') || '未設定'}
+ターゲットペルソナ: ${JSON.stringify(job?.target_persona || {})}
+`.trim()
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `以下の候補者の面接を担当する面接官向けのブリーフィング資料を作成してください。候補者の背景、確認すべきポイント、推奨質問、注意点を含めてください。
+        content: `あなたは採用マネージャーです。以下の候補者の面接を担当する面接官向けのブリーフィング資料を作成してください。求人要件との照合、確認すべきポイント、推奨質問を含めてください。社内メールとして送れる形式で、箇条書きを活用し、簡潔にまとめてください。マークダウンの##は使わず、【】で見出しを囲んでください。
 
-以下の5つのセクションに分けて出力してください:
+${candidateInfo}
 
-## 候補者サマリー
-（候補者の経歴・スキル・現在のポジションの簡潔なまとめ）
-
-## 確認ポイント
-（面接で重点的に確認すべき項目）
-
-## 推奨質問リスト
-（候補者に聞くべき具体的な質問を5〜8個）
-
-## 面接の進め方
-（推奨する面接の流れ・時間配分）
-
-## 注意事項
-（面接時に気をつけるべき点、避けるべきトピックなど）
-
-${candidateInfo}`
+${jobInfo}`
       }]
     })
 

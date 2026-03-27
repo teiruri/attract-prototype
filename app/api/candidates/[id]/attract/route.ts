@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate } = await req.json()
+    const { candidate, job } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -26,28 +26,27 @@ export async function POST(
 ステータス: ${candidate.status || ''}
 `.trim()
 
+    const jobInfo = `
+求人情報:
+ポジション: ${job?.title || '未設定'}
+部署: ${job?.department || '未設定'}
+職種: ${job?.position_type || '未設定'}
+求人概要: ${job?.description || '未設定'}
+必須要件: ${(job?.requirements || []).join(', ') || '未設定'}
+歓迎要件: ${(job?.preferred || []).join(', ') || '未設定'}
+ターゲットペルソナ: ${JSON.stringify(job?.target_persona || {})}
+`.trim()
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `以下の候補者情報をもとに、この候補者を惹きつけるための採用戦略を立案してください。候補者の経歴や志向性に合わせた具体的なアクションプランを提案してください。
+        content: `あなたは採用コンサルタントです。以下の候補者と求人情報をもとに、採用担当者が社内で共有できる「惹きつけ戦略メモ」を作成してください。箇条書きと見出しを使い、簡潔で実用的な内容にしてください。マークダウンの##は使わず、【】で見出しを囲んでください。
 
-以下の4つのセクションに分けて出力してください:
+${candidateInfo}
 
-## 候補者分析
-（候補者の経歴・スキル・志向性の分析）
-
-## 惹きつけポイント
-（この候補者に響くと思われる自社の魅力ポイント）
-
-## コミュニケーション戦略
-（どのようなトーン・チャネル・タイミングでアプローチするか）
-
-## 具体的アクション
-（実行すべきアクションプランを時系列で）
-
-${candidateInfo}`
+${jobInfo}`
       }]
     })
 

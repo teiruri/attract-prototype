@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate } = await req.json()
+    const { candidate, job } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -26,24 +26,27 @@ export async function POST(
 ステータス: ${candidate.status || ''}
 `.trim()
 
+    const jobInfo = `
+求人情報:
+ポジション: ${job?.title || '未設定'}
+部署: ${job?.department || '未設定'}
+職種: ${job?.position_type || '未設定'}
+求人概要: ${job?.description || '未設定'}
+必須要件: ${(job?.requirements || []).join(', ') || '未設定'}
+歓迎要件: ${(job?.preferred || []).join(', ') || '未設定'}
+ターゲットペルソナ: ${JSON.stringify(job?.target_persona || {})}
+`.trim()
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `以下の候補者に送る面接後のフィードバックレターを作成してください。候補者の強みを認め、次のステップへの期待を伝える温かみのあるレターにしてください。
+        content: `あなたは採用担当者です。以下の候補者に面接後に送信するフィードバックメールの文面を作成してください。候補者の強みを具体的に認め、求人ポジションとの適合性に触れ、次のステップへの期待を伝える内容にしてください。実際にそのまま送れるビジネスメール形式（件名・本文・署名欄）で書いてください。マークダウンは使わないでください。
 
-レターは以下の構成で作成してください:
-- 冒頭の挨拶（候補者名を使用）
-- 面接への感謝
-- 候補者の印象に残った強み・良かった点（具体的に）
-- 次のステップへの期待と案内
-- 結びの言葉
-- 署名（採用担当者として）
+${candidateInfo}
 
-候補者の経歴に基づいて、パーソナライズされた内容にしてください。丁寧でプロフェッショナル、かつ温かみのあるトーンで書いてください。
-
-${candidateInfo}`
+${jobInfo}`
       }]
     })
 

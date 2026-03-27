@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate } = await req.json()
+    const { candidate, job } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -26,28 +26,27 @@ export async function POST(
 ステータス: ${candidate.status || ''}
 `.trim()
 
+    const jobInfo = `
+求人情報:
+ポジション: ${job?.title || '未設定'}
+部署: ${job?.department || '未設定'}
+職種: ${job?.position_type || '未設定'}
+求人概要: ${job?.description || '未設定'}
+必須要件: ${(job?.requirements || []).join(', ') || '未設定'}
+歓迎要件: ${(job?.preferred || []).join(', ') || '未設定'}
+ターゲットペルソナ: ${JSON.stringify(job?.target_persona || {})}
+`.trim()
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `以下の候補者に向けた、パーソナライズされたオファー提案を作成してください。候補者の経験、スキル、志向性を考慮した魅力的な提案にしてください。
+        content: `あなたは採用担当者です。以下の候補者に実際に送信するオファーレターの文面を作成してください。候補者の経歴と求人内容を踏まえた、温かみがありプロフェッショナルなビジネスメール形式で書いてください。件名、本文、署名欄を含めてください。マークダウンは使わないでください。
 
-以下の4つのセクションに分けて出力してください:
+${candidateInfo}
 
-## オファーの方向性
-（候補者に最適なポジション・役割の提案方針）
-
-## 候補者への訴求ポイント
-（この候補者に特に響くと思われる自社の魅力や機会）
-
-## 提示条件の提案
-（年収レンジ・役職・成長機会・福利厚生など、候補者の期待に沿った条件案）
-
-## フォローアップ計画
-（オファー提示後のフォローアップスケジュールとアクション）
-
-${candidateInfo}`
+${jobInfo}`
       }]
     })
 

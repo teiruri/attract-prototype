@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Sparkles, Loader2, Copy, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Sparkles, Loader2, Copy, CheckCircle2, Mail } from 'lucide-react'
 
 export default function FeedbackLetterPage() {
   const params = useParams()
   const id = params.id as string
   const [candidate, setCandidate] = useState<any>(null)
+  const [job, setJob] = useState<any>(null)
   const [result, setResult] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -16,10 +17,23 @@ export default function FeedbackLetterPage() {
   const [error, setError] = useState<string>('')
 
   useEffect(() => {
-    fetch(`/api/candidates/${id}`)
-      .then(r => r.json())
-      .then(d => { setCandidate(d.candidate); setLoading(false) })
-      .catch(() => setLoading(false))
+    const fetchData = async () => {
+      try {
+        const candidateRes = await fetch(`/api/candidates/${id}`)
+        const candidateData = await candidateRes.json()
+        setCandidate(candidateData.candidate)
+
+        const jobsRes = await fetch(`/api/jobs?tenant_id=00000000-0000-0000-0000-000000000001`)
+        const jobsData = await jobsRes.json()
+        const matchedJob = (jobsData.jobs || []).find((j: any) => j.id === candidateData.candidate?.job_id)
+        setJob(matchedJob || null)
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
   }, [id])
 
   const handleGenerate = async () => {
@@ -30,7 +44,7 @@ export default function FeedbackLetterPage() {
       const res = await fetch(`/api/candidates/${id}/feedback-letter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate }),
+        body: JSON.stringify({ candidate, job }),
       })
       const data = await res.json()
       if (data.error) {
@@ -80,12 +94,6 @@ export default function FeedbackLetterPage() {
               </p>
             )}
           </div>
-          {result && (
-            <button onClick={handleCopy} className="btn-secondary flex items-center gap-2">
-              {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'コピーしました' : 'コピー'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -151,15 +159,29 @@ export default function FeedbackLetterPage() {
 
         {/* Result Display */}
         {result && (
-          <div className="card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-4 h-4 text-indigo-500" />
-              <span className="text-xs text-gray-400">AIが生成したフィードバックレター</span>
+          <div className="card overflow-hidden">
+            {/* Email header bar */}
+            <div className="bg-gray-50 border-b border-gray-200 px-6 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">メールプレビュー</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={handleCopy} className="btn-secondary text-xs">
+                    {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? 'コピー済み' : 'コピー'}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {result}
+            {/* Email body */}
+            <div className="px-8 py-6 bg-white">
+              <div className="max-w-2xl mx-auto text-sm text-gray-800 leading-relaxed whitespace-pre-wrap" style={{ fontFamily: "'Hiragino Sans', 'Meiryo', sans-serif" }}>
+                {result}
+              </div>
             </div>
-            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
+            <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
               <p className="text-xs text-gray-400">
                 このレターはAIが候補者情報をもとに自動生成しました。送付前に内容を必ずご確認ください。
               </p>

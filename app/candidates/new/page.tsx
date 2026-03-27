@@ -131,11 +131,16 @@ export default function NewCandidatePage() {
         formData.append('file', validFiles[i])
         formData.append('save', 'false') // 抽出のみ、DB保存しない
 
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 120000)
+
         const res = await fetch('/api/candidates/import-document', {
           method: 'POST',
           body: formData,
+          signal: controller.signal,
         })
 
+        clearTimeout(timeoutId)
         const data = await res.json()
 
         if (!res.ok) {
@@ -143,8 +148,11 @@ export default function NewCandidatePage() {
         } else {
           updatedResults[i] = { ...updatedResults[i], status: 'done', extracted: data.extracted }
         }
-      } catch {
-        updatedResults[i] = { ...updatedResults[i], status: 'error', error: '通信エラー' }
+      } catch (err) {
+        const message = err instanceof DOMException && err.name === 'AbortError'
+          ? 'タイムアウト: AI解析に時間がかかりすぎています。ファイルサイズを確認してください。'
+          : '通信エラーが発生しました。ネットワーク接続を確認してください。'
+        updatedResults[i] = { ...updatedResults[i], status: 'error', error: message }
       }
       setDocResults([...updatedResults])
     }
