@@ -7,8 +7,6 @@ import {
   Users,
   Briefcase,
   Sparkles,
-  Settings,
-  ChevronRight,
   Zap,
   LogOut,
 } from 'lucide-react'
@@ -20,7 +18,6 @@ const navItems = [
   { label: '候補者管理', href: '/candidates', icon: Users },
   { label: '求人管理', href: '/jobs', icon: Briefcase },
   { label: '企業魅力設定', href: '/settings/attraction-profile', icon: Sparkles },
-  { label: '設定', href: '/settings', icon: Settings },
 ]
 
 export default function Sidebar() {
@@ -67,9 +64,7 @@ export default function Sidebar() {
           const isActive =
             item.href === '/'
               ? pathname === '/'
-              : item.href === '/settings'
-                ? pathname === '/settings'
-                : pathname.startsWith(item.href)
+              : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
