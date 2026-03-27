@@ -14,7 +14,7 @@ export async function GET(
 
     const { data, error } = await db
       .from('candidates')
-      .select('*, candidate_documents(id, document_type, file_name, file_size, uploaded_at, parse_status), interviews(id, stage, stage_label, scheduled_at, format, status, result, interviewers, evaluation, signal, handoff_notes, feedback_letter, attract_plan)')
+      .select('*, candidate_documents(*), interviews(*)')
       .eq('id', id)
       .single()
 

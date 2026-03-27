@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     let query = db
       .from('candidates')
-      .select('*, candidate_documents(id, document_type, file_name), interviews(id, stage, result)')
+      .select('*, candidate_documents(id), interviews(id, stage, result)')
       .order('created_at', { ascending: false })
 
     if (tenantId) query = query.eq('tenant_id', tenantId)
