@@ -14,11 +14,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccess('')
 
     if (!email || !password) {
       setError('メールアドレスとパスワードを入力してください')
@@ -40,18 +42,10 @@ export default function LoginPage() {
           setIsLoading(false)
           return
         }
-        setError('')
-        // Some Supabase configs auto-confirm; try logging in
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (signInError) {
-          // Likely needs email confirmation
-          setError('アカウントを作成しました。メールを確認してログインしてください。')
-          setIsLoading(false)
-          return
-        }
+        setSuccess('アカウントを作成しました。確認メールを送信しましたので、メール内のリンクをクリックしてからログインしてください。')
+        setIsLoading(false)
+        setMode('login')
+        return
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -151,6 +145,11 @@ export default function LoginPage() {
             {error && (
               <div className="bg-red-50 text-red-600 text-xs px-4 py-3 rounded-xl">
                 {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-emerald-50 text-emerald-700 text-xs px-4 py-3 rounded-xl">
+                {success}
               </div>
             )}
 
