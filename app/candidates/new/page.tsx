@@ -59,6 +59,7 @@ interface CsvPreview {
   candidates: Array<{ full_name?: string; email?: string; phone?: string; university?: string }>
   total: number
   columns: Record<string, string>
+  imported_count?: number
 }
 
 export default function NewCandidatePage() {
@@ -254,7 +255,12 @@ export default function NewCandidatePage() {
         return
       }
 
-      setCsvPreview(data)
+      // Map API response (preview, total_count, detected_mapping) to CsvPreview shape
+      setCsvPreview({
+        candidates: data.preview || [],
+        total: data.total_count || 0,
+        columns: data.detected_mapping || {},
+      })
       setCsvPhase('preview')
     } catch {
       setCsvError('CSVの解析に失敗しました。')
@@ -287,6 +293,12 @@ export default function NewCandidatePage() {
         return
       }
 
+      // Update preview with actual imported count
+      setCsvPreview(prev => prev ? {
+        ...prev,
+        total: data.imported_count || prev.total,
+        imported_count: data.imported_count,
+      } : prev)
       setCsvPhase('done')
     } catch {
       setCsvError('取り込みに失敗しました。')

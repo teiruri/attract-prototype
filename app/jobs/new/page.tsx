@@ -20,11 +20,11 @@ export default function NewJobPage() {
   const [preferred, setPreferred] = useState('')
 
   // ターゲットペルソナ
-  const [personaSummary, setPersonaSummary] = useState('')
-  const [personaExperience, setPersonaExperience] = useState('')
-  const [personaSkills, setPersonaSkills] = useState('')
-  const [personaMotivation, setPersonaMotivation] = useState('')
-  const [personaCulture, setPersonaCulture] = useState('')
+  const [targetAgeRange, setTargetAgeRange] = useState('')
+  const [targetExperience, setTargetExperience] = useState('')
+  const [targetSkills, setTargetSkills] = useState('')
+  const [targetPersonality, setTargetPersonality] = useState('')
+  const [targetMotivation, setTargetMotivation] = useState('')
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -53,11 +53,11 @@ export default function NewJobPage() {
             ? preferred.split('\n').map(p => p.trim()).filter(Boolean)
             : [],
           target_persona: {
-            summary: personaSummary.trim() || null,
-            experience: personaExperience.trim() || null,
-            skills: personaSkills.trim() || null,
-            motivation: personaMotivation.trim() || null,
-            culture_fit: personaCulture.trim() || null,
+            target_age_range: targetAgeRange.trim() || null,
+            target_experience: targetExperience.trim() || null,
+            target_skills: targetSkills.trim() || null,
+            target_personality: targetPersonality.trim() || null,
+            target_motivation: targetMotivation.trim() || null,
           },
         }),
       })
@@ -194,55 +194,55 @@ export default function NewJobPage() {
 
           <div className="space-y-4">
             <div>
-              <label className="label mb-1 block">ペルソナ概要</label>
-              <textarea
-                value={personaSummary}
-                onChange={(e) => setPersonaSummary(e.target.value)}
-                placeholder="例: 事業会社でのプロダクトマネジメント経験3年以上。戦略思考と実行力を両立できる人材。大企業で意思決定プロセスの長さにフラストレーションを感じている。"
-                rows={3}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+              <label className="label mb-1 block">年齢層</label>
+              <input
+                type="text"
+                value={targetAgeRange}
+                onChange={(e) => setTargetAgeRange(e.target.value)}
+                placeholder="25-35歳"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <div>
-              <label className="label mb-1 block">求める経験・実績</label>
+              <label className="label mb-1 block">求める経験</label>
               <textarea
-                value={personaExperience}
-                onChange={(e) => setPersonaExperience(e.target.value)}
-                placeholder="例: Webサービスの立ち上げ or グロース経験、KPI設計・分析経験、エンジニアとの協業経験"
+                value={targetExperience}
+                onChange={(e) => setTargetExperience(e.target.value)}
+                placeholder="3年以上のWebアプリケーション開発経験"
                 rows={2}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
               />
             </div>
 
             <div>
-              <label className="label mb-1 block">求めるスキル・能力</label>
+              <label className="label mb-1 block">求めるスキル</label>
               <textarea
-                value={personaSkills}
-                onChange={(e) => setPersonaSkills(e.target.value)}
-                placeholder="例: データ分析スキル、プレゼンテーション能力、技術理解力、英語力（ビジネスレベル）"
+                value={targetSkills}
+                onChange={(e) => setTargetSkills(e.target.value)}
+                placeholder="React, TypeScript, Node.js など"
                 rows={2}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
               />
             </div>
 
             <div>
-              <label className="label mb-1 block">転職動機・キャリア志向</label>
+              <label className="label mb-1 block">求める人物像</label>
               <textarea
-                value={personaMotivation}
-                onChange={(e) => setPersonaMotivation(e.target.value)}
-                placeholder="例: より裁量のある環境で働きたい、プロダクトの意思決定に直接関わりたい、成長フェーズの会社で挑戦したい"
+                value={targetPersonality}
+                onChange={(e) => setTargetPersonality(e.target.value)}
+                placeholder="自走力があり、チームワークを大切にする方"
                 rows={2}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
               />
             </div>
 
             <div>
-              <label className="label mb-1 block">カルチャーフィット</label>
+              <label className="label mb-1 block">響くポイント</label>
               <textarea
-                value={personaCulture}
-                onChange={(e) => setPersonaCulture(e.target.value)}
-                placeholder="例: 自律的に動ける、オープンなコミュニケーション、スピード感を重視、失敗を恐れずチャレンジする"
+                value={targetMotivation}
+                onChange={(e) => setTargetMotivation(e.target.value)}
+                placeholder="技術的チャレンジ、裁量権、成長環境 など"
                 rows={2}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
               />
