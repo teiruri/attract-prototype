@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate, job } = await req.json()
+    const { candidate, job, revp } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -42,11 +42,28 @@ export async function POST(
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `あなたは採用担当者です。以下の候補者に実際に送信するオファーレターの文面を作成してください。候補者の経歴と求人内容を踏まえた、温かみがありプロフェッショナルなビジネスメール形式で書いてください。件名、本文、署名欄を含めてください。マークダウンは使わないでください。
+        content: `あなたは採用担当者です。以下のエントリー候補者に対して、初回接点（カジュアル面談・インターンシップ・会社説明会など）への参加を促すパーソナルオファーメールを作成してください。
+
+目的：エントリーから初回接点への移行率を高めること
+
+作成方針：
+- 候補者の経歴・スキル・専攻と求人内容のマッチポイントを具体的に提示する
+- 「あなただからこそお声がけしました」という特別感を演出する
+- 初回接点のハードルを下げる（カジュアルな雰囲気、短時間、オンライン可など）
+- 具体的な次のアクション（日程調整リンク、返信など）を明示する
+- 温かみがありつつプロフェッショナルなトーンで書く
+
+形式：そのまま送信できるメール文面（件名・本文・署名欄）
+マークダウンは使わないでください。
 
 ${candidateInfo}
 
-${jobInfo}`
+${jobInfo}
+
+企業REVP情報:
+自社の強み: ${(revp?.strengths || []).join('、') || '未設定'}
+候補者への重要メッセージ: ${(revp?.messages || []).join('、') || '未設定'}
+魅力エピソード: ${(revp?.episodes || []).join('、') || '未設定'}`
       }]
     })
 

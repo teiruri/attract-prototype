@@ -10,6 +10,7 @@ export default function AttractStrategyPage() {
   const id = params.id as string
   const [candidate, setCandidate] = useState<any>(null)
   const [job, setJob] = useState<any>(null)
+  const [revp, setRevp] = useState<any>(null)
   const [result, setResult] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -27,6 +28,11 @@ export default function AttractStrategyPage() {
         const jobsData = await jobsRes.json()
         const matchedJob = (jobsData.jobs || []).find((j: any) => j.id === candidateData.candidate?.job_id)
         setJob(matchedJob || null)
+
+        const profileRes = await fetch(`/api/company-profile?tenant_id=00000000-0000-0000-0000-000000000001`)
+        const profileData = await profileRes.json()
+        const revpData = profileData.profile?.revp_data || null
+        setRevp(revpData)
       } catch {
         // ignore
       } finally {
@@ -44,7 +50,7 @@ export default function AttractStrategyPage() {
       const res = await fetch(`/api/candidates/${id}/attract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate, job }),
+        body: JSON.stringify({ candidate, job, revp }),
       })
       const data = await res.json()
       if (data.error) {

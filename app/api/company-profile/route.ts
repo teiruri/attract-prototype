@@ -23,6 +23,39 @@ export async function GET() {
   }
 }
 
+// 企業の魅力プロフィール部分更新（REVP等）
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const db = createServerClient()
+
+    const { data: existing } = await db
+      .from('company_profiles')
+      .select('id')
+      .limit(1)
+      .single()
+
+    if (!existing) {
+      return NextResponse.json({ error: 'プロフィールが見つかりません' }, { status: 404 })
+    }
+
+    const updateFields: Record<string, unknown> = {}
+    if (body.revp_data !== undefined) updateFields.revp_data = body.revp_data
+
+    const { data, error } = await db
+      .from('company_profiles')
+      .update(updateFields)
+      .eq('id', existing.id)
+      .select()
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ profile: data })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
+
 // 企業の魅力プロフィール作成・更新
 export async function POST(req: NextRequest) {
   try {

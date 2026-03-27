@@ -22,6 +22,7 @@ import {
   Loader2,
   X,
   AlertCircle,
+  Plus,
 } from 'lucide-react'
 
 type DocPhase = 'idle' | 'parsing' | 'preview' | 'saving' | 'done'
@@ -70,7 +71,7 @@ export default function NewCandidatePage() {
   const [docError, setDocError] = useState('')
   const [docResults, setDocResults] = useState<DocResult[]>([])
   const [mergedData, setMergedData] = useState<ExtractedData | null>(null)
-  const docFilesRef = useRef<File[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const docInputRef = useRef<HTMLInputElement>(null)
 
   // CSV import state
@@ -81,13 +82,15 @@ export default function NewCandidatePage() {
   const csvFileRef = useRef<File | null>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
 
-  // ========== Document Import (Multiple) ==========
-  const handleDocFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ========== Document Import (Two-Step Flow) ==========
+
+  // Step 1: Add files to the selection list
+  const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
     const validTypes = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif', '.webp']
-    const validFiles: File[] = []
+    const newFiles: File[] = []
     const errors: string[] = []
 
     for (let i = 0; i < files.length; i++) {
@@ -101,34 +104,55 @@ export default function NewCandidatePage() {
         errors.push(`${file.name}: 10MBを超えています`)
         continue
       }
-      validFiles.push(file)
+      // Avoid duplicates by name+size
+      const isDuplicate = selectedFiles.some(
+        (f) => f.name === file.name && f.size === file.size
+      )
+      if (!isDuplicate) {
+        newFiles.push(file)
+      }
     }
 
-    if (validFiles.length === 0) {
+    if (errors.length > 0) {
       setDocError(errors.join('、'))
-      return
+    } else {
+      setDocError('')
     }
 
-    docFilesRef.current = validFiles
-    setDocError(errors.length > 0 ? errors.join('、') : '')
+    if (newFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...newFiles])
+    }
+
+    // Reset file input so same files can be selected again
+    if (docInputRef.current) docInputRef.current.value = ''
+  }
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // Step 2: Process all selected files
+  const handleStartParsing = async () => {
+    if (selectedFiles.length === 0) return
 
     // Initialize results
-    const initialResults: DocResult[] = validFiles.map(f => ({
+    const initialResults: DocResult[] = selectedFiles.map((f) => ({
       fileName: f.name,
       status: 'pending',
     }))
     setDocResults(initialResults)
     setDocPhase('parsing')
+    setDocError('')
 
     // Process files sequentially (extract only, no DB save)
     const updatedResults = [...initialResults]
-    for (let i = 0; i < validFiles.length; i++) {
+    for (let i = 0; i < selectedFiles.length; i++) {
       updatedResults[i] = { ...updatedResults[i], status: 'parsing' }
       setDocResults([...updatedResults])
 
       try {
         const formData = new FormData()
-        formData.append('file', validFiles[i])
+        formData.append('file', selectedFiles[i])
         formData.append('save', 'false') // 抽出のみ、DB保存しない
 
         const controller = new AbortController()
@@ -158,9 +182,6 @@ export default function NewCandidatePage() {
     }
 
     setDocPhase('preview')
-
-    // Reset file input so same files can be selected again
-    if (docInputRef.current) docInputRef.current.value = ''
   }
 
   const handleCreateAllCandidates = async () => {
@@ -225,6 +246,14 @@ export default function NewCandidatePage() {
       setDocError('候補者の登録に失敗しました')
       setDocPhase('preview')
     }
+  }
+
+  const handleResetDocFlow = () => {
+    setDocPhase('idle')
+    setDocResults([])
+    setSelectedFiles([])
+    setMergedData(null)
+    setDocError('')
   }
 
   const successCount = docResults.filter(r => r.status === 'done').length
@@ -338,7 +367,7 @@ export default function NewCandidatePage() {
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2 space-y-6">
 
-            {/* ===== Card 1: 書類から取り込み（複数対応） ===== */}
+            {/* ===== Card 1: 書類から取り込み（2ステップフロー） ===== */}
             <div className="card p-6">
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center">
@@ -346,7 +375,7 @@ export default function NewCandidatePage() {
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900">書類から取り込み（AI自動解析）</h2>
-                  <p className="text-xs text-gray-400">履歴書・職務経歴書をAIが自動解析。複数ファイル同時アップロード対応</p>
+                  <p className="text-xs text-gray-400">同一候補者の書類をまとめてアップロード。AIが自動解析して1名の候補者として登録</p>
                 </div>
                 <span className="badge bg-indigo-50 text-indigo-600 ml-auto">
                   <Sparkles className="w-3 h-3 mr-0.5" />推奨
@@ -369,7 +398,7 @@ export default function NewCandidatePage() {
                     <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4 flex items-start gap-2.5">
                       <Brain className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-indigo-700 leading-relaxed">
-                        複数の書類をまとめてアップロードできます。AIが1件ずつ解析し、候補者情報を自動抽出します。
+                        同一候補者の書類をまとめてアップロードできます。履歴書＋職務経歴書など、複数の書類を統合して1名の候補者として登録します。
                       </p>
                     </div>
 
@@ -379,21 +408,72 @@ export default function NewCandidatePage() {
                       </div>
                     )}
 
+                    {/* Drop zone / file selector */}
                     <div
                       onClick={() => docInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-all"
+                      className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-all"
                     >
-                      <Upload className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                      <Upload className="w-7 h-7 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm font-medium text-gray-600 mb-1">
-                        クリックしてファイルを選択（複数選択可）
+                        同一候補者の書類をまとめてアップロード
                       </p>
-                      <p className="text-xs text-gray-400">PDF / Word / 画像ファイル対応（各最大10MB）</p>
+                      <p className="text-xs text-gray-400">クリックしてファイルを選択（複数選択可）</p>
                       <div className="flex items-center justify-center gap-3 mt-3">
                         <span className="badge bg-gray-100 text-gray-500">履歴書</span>
                         <span className="badge bg-gray-100 text-gray-500">職務経歴書</span>
                         <span className="badge bg-gray-100 text-gray-500">エントリーシート</span>
                       </div>
                     </div>
+
+                    {/* Selected files list */}
+                    {selectedFiles.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-xs font-medium text-gray-500 mb-2">
+                          選択済みファイル（{selectedFiles.length}件）
+                        </p>
+                        <div className="space-y-1.5">
+                          {selectedFiles.map((file, i) => (
+                            <div
+                              key={`${file.name}-${i}`}
+                              className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 rounded-lg group"
+                            >
+                              <FileText className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                              <span className="text-sm text-gray-700 flex-1 truncate">{file.name}</span>
+                              <span className="text-[10px] text-gray-400">
+                                {(file.size / 1024).toFixed(0)}KB
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRemoveFile(i)
+                                }}
+                                className="p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-3 mt-4">
+                          <button
+                            onClick={() => docInputRef.current?.click()}
+                            className="btn-secondary text-sm"
+                          >
+                            <Plus className="w-4 h-4" />
+                            ファイルを追加
+                          </button>
+                          <button
+                            onClick={handleStartParsing}
+                            className="btn-primary text-sm"
+                          >
+                            <Brain className="w-4 h-4" />
+                            AI解析を開始
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -450,7 +530,7 @@ export default function NewCandidatePage() {
                     <div className="flex items-center gap-2 mb-4">
                       <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                       <p className="text-sm font-bold text-gray-900">
-                        解析完了 — <span className="text-emerald-600">{successCount}名</span>抽出
+                        解析完了 — <span className="text-emerald-600">{successCount}件</span>の書類から情報を抽出
                         {errorCount > 0 && <span className="text-red-500 ml-1">（{errorCount}件エラー）</span>}
                       </p>
                     </div>
@@ -521,13 +601,13 @@ export default function NewCandidatePage() {
                     </div>
 
                     <div className="flex gap-3 justify-end">
-                      <button onClick={() => { setDocPhase('idle'); setDocResults([]) }} className="btn-secondary">
+                      <button onClick={handleResetDocFlow} className="btn-secondary">
                         やり直す
                       </button>
                       {successCount > 0 && (
                         <button onClick={handleCreateAllCandidates} className="btn-primary">
                           <Sparkles className="w-4 h-4" />
-                          {successCount}件の書類から1名の候補者を登録
+                          候補者として登録
                         </button>
                       )}
                     </div>
@@ -551,7 +631,7 @@ export default function NewCandidatePage() {
                       {mergedData?.full_name || '候補者'}（{docResults.filter(r => r.status === 'done').length}件の書類から統合）
                     </p>
                     <div className="flex items-center justify-center gap-3">
-                      <button onClick={() => { setDocPhase('idle'); setDocResults([]); setMergedData(null) }} className="btn-secondary">
+                      <button onClick={handleResetDocFlow} className="btn-secondary">
                         続けて取り込む
                       </button>
                       <Link href="/candidates" className="btn-primary">

@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate, job } = await req.json()
+    const { candidate, job, revp } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -42,11 +42,27 @@ export async function POST(
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `あなたは採用担当者です。以下の候補者に面接後に送信するフィードバックメールの文面を作成してください。候補者の強みを具体的に認め、求人ポジションとの適合性に触れ、次のステップへの期待を伝える内容にしてください。実際にそのまま送れるビジネスメール形式（件名・本文・署名欄）で書いてください。マークダウンは使わないでください。
+        content: `あなたは採用担当者です。以下の候補者に対して、選考通過（合格）を伝えるメールを作成してください。
+
+作成方針：
+- 選考通過のお祝いと感謝を伝える
+- 面接での候補者の印象的だった点や強みを具体的に言及する
+- 求人ポジションとの適合性を改めて伝える
+- 次の選考ステップの案内を含める
+- 候補者の入社意欲を高める内容にする
+- 企業の魅力や将来のビジョンに触れる
+
+形式：そのまま送信できるメール文面（件名・本文・署名欄）
+マークダウンは使わないでください。
 
 ${candidateInfo}
 
-${jobInfo}`
+${jobInfo}
+
+企業REVP情報:
+自社の強み: ${(revp?.strengths || []).join('、') || '未設定'}
+候補者への重要メッセージ: ${(revp?.messages || []).join('、') || '未設定'}
+魅力エピソード: ${(revp?.episodes || []).join('、') || '未設定'}`
       }]
     })
 

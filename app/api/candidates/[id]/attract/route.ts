@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate, job } = await req.json()
+    const { candidate, job, revp } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -46,7 +46,12 @@ export async function POST(
 
 ${candidateInfo}
 
-${jobInfo}`
+${jobInfo}
+
+企業REVP情報:
+自社の強み: ${(revp?.strengths || []).join('、') || '未設定'}
+候補者への重要メッセージ: ${(revp?.messages || []).join('、') || '未設定'}
+魅力エピソード: ${(revp?.episodes || []).join('、') || '未設定'}`
       }]
     })
 

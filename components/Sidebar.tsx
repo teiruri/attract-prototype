@@ -7,6 +7,7 @@ import {
   Users,
   Briefcase,
   Sparkles,
+  BarChart3,
   Zap,
   LogOut,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ const navItems = [
   { label: '候補者管理', href: '/candidates', icon: Users },
   { label: '求人管理', href: '/jobs', icon: Briefcase },
   { label: '企業魅力設定', href: '/settings/attraction-profile', icon: Sparkles },
+  { label: 'REVP診断', href: '/settings/revp-report', icon: BarChart3 },
 ]
 
 export default function Sidebar() {

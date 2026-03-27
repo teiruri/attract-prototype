@@ -10,6 +10,7 @@ export default function FeedbackLetterPage() {
   const id = params.id as string
   const [candidate, setCandidate] = useState<any>(null)
   const [job, setJob] = useState<any>(null)
+  const [revp, setRevp] = useState<any>(null)
   const [result, setResult] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -27,6 +28,11 @@ export default function FeedbackLetterPage() {
         const jobsData = await jobsRes.json()
         const matchedJob = (jobsData.jobs || []).find((j: any) => j.id === candidateData.candidate?.job_id)
         setJob(matchedJob || null)
+
+        const profileRes = await fetch(`/api/company-profile?tenant_id=00000000-0000-0000-0000-000000000001`)
+        const profileData = await profileRes.json()
+        const revpData = profileData.profile?.revp_data || null
+        setRevp(revpData)
       } catch {
         // ignore
       } finally {
@@ -44,7 +50,7 @@ export default function FeedbackLetterPage() {
       const res = await fetch(`/api/candidates/${id}/feedback-letter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate, job }),
+        body: JSON.stringify({ candidate, job, revp }),
       })
       const data = await res.json()
       if (data.error) {
@@ -85,7 +91,7 @@ export default function FeedbackLetterPage() {
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-500" />
-              <h1 className="text-xl font-bold text-gray-900">フィードバックレター</h1>
+              <h1 className="text-xl font-bold text-gray-900">合格通知レター</h1>
             </div>
             {candidate && (
               <p className="text-sm text-gray-500 mt-1">
@@ -142,12 +148,12 @@ export default function FeedbackLetterPage() {
               {generating ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  フィードバックレターを生成中...
+                  合格通知レターを作成中...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  フィードバックレターを生成
+                  合格通知レターを作成
                 </>
               )}
             </button>

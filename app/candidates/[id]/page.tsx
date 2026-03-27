@@ -378,22 +378,22 @@ export default function CandidateDetailPage() {
                 <div className="space-y-2">
                   <Link href={`/candidates/${id}/attract`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                     <Sparkles className="w-4 h-4 text-indigo-500" />
-                    <span className="text-sm text-gray-700">Attract戦略ボード</span>
+                    <span className="text-sm text-gray-700">惹きつけ戦略</span>
                     <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
                   </Link>
                   <Link href={`/candidates/${id}/personal-offer`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-colors">
                     <Award className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm text-gray-700">個別オファー</span>
+                    <span className="text-sm text-gray-700">パーソナルオファー</span>
                     <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
                   </Link>
                   <Link href={`/candidates/${id}/feedback-letter`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                     <Mail className="w-4 h-4 text-indigo-500" />
-                    <span className="text-sm text-gray-700">フィードバックレター</span>
+                    <span className="text-sm text-gray-700">合格通知レター</span>
                     <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
                   </Link>
                   <Link href={`/candidates/${id}/brief`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                     <FileText className="w-4 h-4 text-indigo-500" />
-                    <span className="text-sm text-gray-700">面接官ブリーフ</span>
+                    <span className="text-sm text-gray-700">次回面接シナリオ</span>
                     <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
                   </Link>
                   <Link href={`/candidates/${id}/documents`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">

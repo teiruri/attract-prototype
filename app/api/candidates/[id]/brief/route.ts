@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate, job } = await req.json()
+    const { candidate, job, revp } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -42,11 +42,28 @@ export async function POST(
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `あなたは採用マネージャーです。以下の候補者の面接を担当する面接官向けのブリーフィング資料を作成してください。求人要件との照合、確認すべきポイント、推奨質問を含めてください。社内メールとして送れる形式で、箇条書きを活用し、簡潔にまとめてください。マークダウンの##は使わず、【】で見出しを囲んでください。
+        content: `あなたは採用マネージャーです。以下の候補者の次回面接に向けた面接シナリオを作成してください。
+
+作成方針：
+- 候補者の経歴と求人要件を照合した確認ポイントを整理する
+- 候補者の志向性や価値観を深掘りする質問を提案する
+- 企業の魅力を効果的に伝えるトークポイントを含める
+- 面接の時間配分と進行の流れを提案する
+- 候補者の懸念点を払拭するための準備事項を含める
+- 面接後のフォローアップアクションも提案する
+
+形式：面接官が印刷して手元に置けるブリーフィング資料
+【】で見出しを囲み、箇条書きを活用して簡潔にまとめてください。
+マークダウンの##は使わないでください。
 
 ${candidateInfo}
 
-${jobInfo}`
+${jobInfo}
+
+企業REVP情報:
+自社の強み: ${(revp?.strengths || []).join('、') || '未設定'}
+候補者への重要メッセージ: ${(revp?.messages || []).join('、') || '未設定'}
+魅力エピソード: ${(revp?.episodes || []).join('、') || '未設定'}`
       }]
     })
 

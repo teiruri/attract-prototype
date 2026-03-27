@@ -10,6 +10,7 @@ export default function BriefPage() {
   const id = params.id as string
   const [candidate, setCandidate] = useState<any>(null)
   const [job, setJob] = useState<any>(null)
+  const [revp, setRevp] = useState<any>(null)
   const [result, setResult] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -27,6 +28,11 @@ export default function BriefPage() {
         const jobsData = await jobsRes.json()
         const matchedJob = (jobsData.jobs || []).find((j: any) => j.id === candidateData.candidate?.job_id)
         setJob(matchedJob || null)
+
+        const profileRes = await fetch(`/api/company-profile?tenant_id=00000000-0000-0000-0000-000000000001`)
+        const profileData = await profileRes.json()
+        const revpData = profileData.profile?.revp_data || null
+        setRevp(revpData)
       } catch {
         // ignore
       } finally {
@@ -44,7 +50,7 @@ export default function BriefPage() {
       const res = await fetch(`/api/candidates/${id}/brief`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate, job }),
+        body: JSON.stringify({ candidate, job, revp }),
       })
       const data = await res.json()
       if (data.error) {
@@ -85,7 +91,7 @@ export default function BriefPage() {
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-500" />
-              <h1 className="text-xl font-bold text-gray-900">面接官ブリーフィング</h1>
+              <h1 className="text-xl font-bold text-gray-900">次回面接シナリオ</h1>
             </div>
             {candidate && (
               <p className="text-sm text-gray-500 mt-1">
@@ -142,12 +148,12 @@ export default function BriefPage() {
               {generating ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  ブリーフィングを生成中...
+                  面接シナリオを作成中...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  面接官ブリーフィングを生成
+                  面接シナリオを作成
                 </>
               )}
             </button>
