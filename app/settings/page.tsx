@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Sparkles, Users, Shield, Bell, ChevronRight } from 'lucide-react'
+import { Sparkles, ChevronRight } from 'lucide-react'
 
 const settingsItems = [
   {
@@ -11,30 +11,6 @@ const settingsItems = [
     href: '/settings/attraction-profile',
     badge: '重要',
     badgeColor: 'bg-indigo-100 text-indigo-600',
-  },
-  {
-    icon: Users,
-    title: 'ユーザー・権限管理',
-    description: 'チームメンバーの招待とロールを管理します',
-    href: '/settings/users',
-    badge: null,
-    badgeColor: '',
-  },
-  {
-    icon: Shield,
-    title: 'プライバシー・個人情報保護',
-    description: '候補者の同意設定・保管期間・削除ポリシーを管理します',
-    href: '/settings/privacy',
-    badge: null,
-    badgeColor: '',
-  },
-  {
-    icon: Bell,
-    title: '通知設定',
-    description: 'メール通知のタイミングと内容を設定します',
-    href: '/settings/notifications',
-    badge: 'Phase 2',
-    badgeColor: 'bg-gray-100 text-gray-500',
   },
 ]
 

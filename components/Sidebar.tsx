@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
@@ -10,27 +10,33 @@ import {
   Settings,
   ChevronRight,
   Zap,
-  BarChart3,
-  Building2,
-  UserCheck,
-  ClipboardList,
+  LogOut,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { getSupabase } from '@/lib/supabase'
 
 const navItems = [
   { label: 'ダッシュボード', href: '/', icon: LayoutDashboard },
   { label: '候補者管理', href: '/candidates', icon: Users },
   { label: '求人管理', href: '/jobs', icon: Briefcase },
-  { label: '社員タレントプール', href: '/talent-pool/employees', icon: Building2 },
-  { label: '応募者タレントプール', href: '/talent-pool/candidates', icon: UserCheck },
-  { label: '採用活動総括', href: '/recruitment-summary', icon: ClipboardList },
   { label: '企業魅力設定', href: '/settings/attraction-profile', icon: Sparkles },
-  { label: 'REVP診断レポート', href: '/settings/revp-report', icon: BarChart3 },
   { label: '設定', href: '/settings', icon: Settings },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      const supabase = getSupabase()
+      await supabase.auth.signOut()
+    } catch {
+      // ignore errors
+    }
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-white border-r border-gray-200 flex flex-col z-30">
@@ -50,9 +56,8 @@ export default function Sidebar() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-400">テナント</p>
-            <p className="text-sm font-medium text-gray-800 truncate max-w-[160px]">テクノベーション株式会社</p>
+            <p className="text-sm font-medium text-gray-800 truncate max-w-[160px]">マイ企業</p>
           </div>
-          <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
         </div>
       </div>
 
@@ -84,17 +89,16 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* User */}
+      {/* Logout */}
       <div className="px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-indigo-100 rounded-full flex items-center justify-center">
-            <span className="text-xs font-bold text-indigo-700">佐</span>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-800">佐藤 彩花</p>
-            <p className="text-[10px] text-gray-400">採用担当</p>
-          </div>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+          title="ログアウト"
+        >
+          <LogOut className="w-4 h-4" />
+          ログアウト
+        </button>
       </div>
     </aside>
   )

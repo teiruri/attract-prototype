@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -24,39 +24,163 @@ import {
   Activity,
   Award,
 } from 'lucide-react'
-import { getCandidateById, getStageColor, getStageLabel, getSignalStrengthColor, getSignalStrengthLabel } from '@/lib/mock-data'
-
-const PREDICTIONS: Record<string, {
-  offerProb: number; acceptProb: number;
-  motivationScore: number; personaMatch: number;
-  interestLevel: number; understandingLevel: number;
-}> = {
-  cand_001: { offerProb: 78, acceptProb: 85, motivationScore: 82, personaMatch: 91, interestLevel: 88, understandingLevel: 75 },
-  cand_002: { offerProb: 45, acceptProb: 52, motivationScore: 55, personaMatch: 68, interestLevel: 60, understandingLevel: 48 },
-  cand_003: { offerProb: 82, acceptProb: 88, motivationScore: 85, personaMatch: 94, interestLevel: 90, understandingLevel: 82 },
-  cand_004: { offerProb: 61, acceptProb: 72, motivationScore: 70, personaMatch: 76, interestLevel: 75, understandingLevel: 65 },
-}
 
 type Tab = 'overview' | 'interviews' | 'signals' | 'card'
+
+interface CandidateData {
+  id: string
+  full_name: string
+  email: string
+  phone?: string
+  hiring_type: string
+  status: string
+  source: string
+  job_id: string
+  current_company?: string
+  current_title?: string
+  university?: string
+  faculty?: string
+  graduation_year?: number
+  work_experience?: Array<{ company: string; title: string; years: number }>
+  created_at: string
+  candidate_documents?: Array<{
+    id: string
+    document_type: string
+    file_name: string
+    file_size?: string
+    uploaded_at?: string
+    parse_status?: string
+  }>
+  interviews?: Array<{
+    id: string
+    stage: string
+    stage_label?: string
+    scheduled_at?: string
+    format?: string
+    status: string
+    result?: string
+    interviewers?: string[]
+    evaluation?: {
+      overallScore: number
+      skillScore: number
+      cultureFitScore: number
+      potentialScore: number
+      comment: string
+      concerns: string
+      recommendation: string
+      submittedBy: string
+      submittedAt: string
+    }
+    signal?: {
+      id: string
+      interviewId: string
+      stageLabel: string
+      careerValues: Array<{ value: string; strength: string; evidence: string }>
+      interests: string[]
+      concerns: Array<{ concern: string; severity: string; response?: string }>
+      positiveReactions: Array<{ topic: string; description: string }>
+      questionsAsked: string[]
+      energyLevel: number
+      overallNote: string
+      source: string
+      createdAt: string
+    }
+    handoff_notes?: string[]
+    feedback_letter?: { status: string }
+    attract_plan?: object
+  }>
+}
+
+function getStageLabel(stage: string): string {
+  const labels: Record<string, string> = {
+    casual: 'カジュアル面談', interview_1: '一次面接', interview_2: '二次面接',
+    final: '最終面接', offer: 'オファー', hired: '内定承諾',
+    briefing: '説明会', es: 'ES選考', aptitude: '適性検査', gd: 'GD', active: '選考中',
+  }
+  return labels[stage] || stage || '選考中'
+}
+
+function getStageColor(stage: string): string {
+  const colors: Record<string, string> = {
+    casual: 'bg-gray-100 text-gray-600', interview_1: 'bg-blue-50 text-blue-600',
+    interview_2: 'bg-indigo-50 text-indigo-600', final: 'bg-purple-50 text-purple-600',
+    offer: 'bg-amber-50 text-amber-600', hired: 'bg-emerald-50 text-emerald-600',
+  }
+  return colors[stage] || 'bg-gray-100 text-gray-600'
+}
+
+function getSignalStrengthLabel(strength: string): string {
+  return strength === 'high' ? '強' : strength === 'medium' ? '中' : '弱'
+}
+
+function getSignalStrengthColor(strength: string): string {
+  return strength === 'high' ? 'bg-emerald-50 text-emerald-700'
+    : strength === 'medium' ? 'bg-amber-50 text-amber-700'
+    : 'bg-gray-100 text-gray-600'
+}
 
 export default function CandidateDetailPage() {
   const params = useParams()
   const id = params.id as string
-  const candidate = getCandidateById(id)
+  const [candidate, setCandidate] = useState<CandidateData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
-  if (!candidate) {
-    return <div className="p-8 text-gray-500">候補者が見つかりません</div>
+  useEffect(() => {
+    async function fetchCandidate() {
+      try {
+        const res = await fetch(`/api/candidates/${id}`)
+        const data = await res.json()
+        if (res.ok && data.candidate) {
+          setCandidate(data.candidate)
+        } else {
+          setError(data.error || '候補者が見つかりません')
+        }
+      } catch {
+        setError('データの取得に失敗しました')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCandidate()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
-  const app = candidate.applications[0]
-  const completedInterviews = app?.interviews.filter((i) => i.status === 'completed') ?? []
-  const upcomingInterviews = app?.interviews.filter((i) => i.status === 'scheduled') ?? []
+  if (error || !candidate) {
+    return (
+      <div className="p-8">
+        <Link href="/candidates" className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mb-4">
+          <ArrowLeft className="w-4 h-4" />
+          候補者一覧に戻る
+        </Link>
+        <div className="card p-8 text-center text-gray-500">
+          <p>{error || '候補者が見つかりません'}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const interviews = candidate.interviews || []
+  const completedInterviews = interviews.filter((i) => i.status === 'completed')
+  const upcomingInterviews = interviews.filter((i) => i.status === 'scheduled')
   const allSignals = completedInterviews.flatMap((i) => (i.signal ? [i.signal] : []))
 
+  // Determine current stage from latest interview
+  const latestInterview = interviews.length ? interviews[interviews.length - 1] : null
+  const currentStage = latestInterview?.stage || candidate.status
+  const isNewgrad = candidate.hiring_type === 'new_graduate' || candidate.hiring_type === 'newgrad'
+
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'overview', label: '概要・カルテ' },
-    { id: 'interviews', label: `面接（${app?.interviews.length ?? 0}）` },
+    { id: 'overview', label: '概要' },
+    { id: 'interviews', label: `面接（${interviews.length}）` },
     { id: 'signals', label: `シグナル（${allSignals.length}）` },
     { id: 'card', label: 'AIカルテ' },
   ]
@@ -71,74 +195,43 @@ export default function CandidateDetailPage() {
           </Link>
           <span className="text-sm text-gray-400">候補者管理</span>
           <ChevronRight className="w-3 h-3 text-gray-300" />
-          <span className="text-sm text-gray-700 font-medium">{candidate.fullName}</span>
+          <span className="text-sm text-gray-700 font-medium">{candidate.full_name}</span>
         </div>
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className={`w-14 h-14 rounded-full ${candidate.avatarColor} flex items-center justify-center`}>
-              <span className="text-xl font-bold text-white">{candidate.avatarInitials[0]}</span>
+            <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center">
+              <span className="text-xl font-bold text-indigo-700">{(candidate.full_name || '?')[0]}</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">{candidate.fullName}</h1>
-              <p className="text-sm text-gray-500">{candidate.currentTitle} / {candidate.currentCompany}</p>
+              <h1 className="text-xl font-bold text-gray-900">{candidate.full_name}</h1>
+              <p className="text-sm text-gray-500">
+                {candidate.current_title ? `${candidate.current_title} / ${candidate.current_company || ''}` : candidate.email}
+              </p>
               <div className="flex items-center gap-2 mt-1.5">
-                {app && (
-                  <span className={`badge ${getStageColor(app.currentStage)}`}>
-                    {getStageLabel(app.currentStage)}
-                  </span>
-                )}
-                <span className="badge bg-gray-100 text-gray-600">
-                  {candidate.source}
+                <span className={`badge ${getStageColor(currentStage)}`}>
+                  {getStageLabel(currentStage)}
                 </span>
-                {app?.attractStrategy && (
-                  <span className="badge bg-indigo-50 text-indigo-600">
-                    Attract戦略あり
+                {candidate.source && (
+                  <span className="badge bg-gray-100 text-gray-600">
+                    {candidate.source}
                   </span>
                 )}
-                {candidate.hiringType === 'newgrad' && (
+                {isNewgrad && (
                   <span className="badge bg-pink-50 text-pink-700">
                     <GraduationCap className="w-3 h-3 mr-1" />
-                    新卒{candidate.graduationYear}年卒
+                    新卒{candidate.graduation_year ? `${candidate.graduation_year}年卒` : ''}
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - only show API-connected features */}
           <div className="flex items-center gap-2">
             <Link href={`/candidates/${id}/documents`} className="btn-secondary">
               <Upload className="w-4 h-4 text-teal-500" />
               書類管理
-            </Link>
-            <Link href={`/candidates/${id}/ai-interview`} className="btn-secondary">
-              <Brain className="w-4 h-4 text-violet-500" />
-              AI面接
-            </Link>
-            <Link href={`/candidates/${id}/signal-input`} className="btn-secondary">
-              <Brain className="w-4 h-4 text-violet-500" />
-              シグナル入力
-            </Link>
-            <Link href={`/candidates/${id}/attract`} className="btn-secondary">
-              <Sparkles className="w-4 h-4 text-indigo-500" />
-              Attract戦略
-            </Link>
-            <Link href={`/candidates/${id}/development`} className="btn-secondary">
-              <Target className="w-4 h-4 text-amber-500" />
-              育成フィードバック
-            </Link>
-            <Link href={`/candidates/${id}/brief`} className="btn-secondary">
-              <FileText className="w-4 h-4" />
-              面接官ブリーフ
-            </Link>
-<Link href={`/candidates/${id}/personal-offer`} className="btn-secondary">
-              <Award className="w-4 h-4 text-orange-500" />
-              個別オファー
-            </Link>
-            <Link href={`/candidates/${id}/feedback-letter`} className="btn-primary">
-              <Mail className="w-4 h-4" />
-              フィードバックレター
             </Link>
           </div>
         </div>
@@ -170,67 +263,42 @@ export default function CandidateDetailPage() {
               <div className="card p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="section-title mb-0">候補者情報</h2>
-                  {candidate.hiringType === 'newgrad' && (
+                  {isNewgrad && (
                     <span className="badge bg-pink-50 text-pink-700">
                       <GraduationCap className="w-3 h-3 mr-1" />
-                      新卒採用 {candidate.graduationYear}年3月卒予定
+                      新卒採用 {candidate.graduation_year ? `${candidate.graduation_year}年3月卒予定` : ''}
                     </span>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {candidate.hiringType === 'newgrad' ? (
+                  {isNewgrad ? (
                     <>
                       {[
-                        { label: '氏名', value: candidate.fullName },
+                        { label: '氏名', value: candidate.full_name },
                         { label: 'メール', value: candidate.email },
-                        { label: '電話番号', value: candidate.phone },
-                        { label: '大学・学部', value: `${candidate.university ?? ''} ${candidate.faculty ?? ''}` },
-                        { label: '卒業予定', value: `${candidate.graduationYear}年3月` },
-                        { label: '流入元', value: candidate.source },
-                        { label: '登録日', value: candidate.createdAt },
-                        { label: '同意取得', value: candidate.consentGiven ? `済（${candidate.consentDate}）` : '未取得' },
+                        { label: '電話番号', value: candidate.phone || '—' },
+                        { label: '大学・学部', value: `${candidate.university || ''} ${candidate.faculty || ''}`.trim() || '—' },
+                        { label: '卒業予定', value: candidate.graduation_year ? `${candidate.graduation_year}年3月` : '—' },
+                        { label: '流入元', value: candidate.source || '—' },
+                        { label: '登録日', value: candidate.created_at ? new Date(candidate.created_at).toLocaleDateString('ja-JP') : '—' },
+                        { label: 'ステータス', value: candidate.status || '—' },
                       ].map((item) => (
                         <div key={item.label}>
                           <p className="label mb-1">{item.label}</p>
                           <p className="text-sm text-gray-800">{item.value}</p>
                         </div>
                       ))}
-                      {candidate.internship && (
-                        <div className="col-span-2">
-                          <p className="label mb-1">インターン経験</p>
-                          <p className="text-sm text-gray-800">{candidate.internship}</p>
-                        </div>
-                      )}
-                      {candidate.clubActivities && (
-                        <div className="col-span-2">
-                          <p className="label mb-1">課外活動・実績</p>
-                          <p className="text-sm text-gray-800">{candidate.clubActivities}</p>
-                        </div>
-                      )}
-                      {candidate.jobHuntingAxis && (
-                        <div className="col-span-2">
-                          <p className="label mb-1">就活の軸</p>
-                          <p className="text-sm text-gray-800 leading-relaxed">{candidate.jobHuntingAxis}</p>
-                        </div>
-                      )}
-                      {candidate.toeicScore && (
-                        <div>
-                          <p className="label mb-1">TOEIC</p>
-                          <p className="text-sm text-gray-800">{candidate.toeicScore}点</p>
-                        </div>
-                      )}
                     </>
                   ) : (
                     <>
                       {[
-                        { label: '氏名', value: candidate.fullName },
+                        { label: '氏名', value: candidate.full_name },
                         { label: 'メール', value: candidate.email },
-                        { label: '電話番号', value: candidate.phone },
-                        { label: '現職', value: `${candidate.currentCompany} / ${candidate.currentTitle}` },
-                        { label: '経験年数', value: `${candidate.yearsExperience}年` },
-                        { label: '流入元', value: candidate.source },
-                        { label: '登録日', value: candidate.createdAt },
-                        { label: '同意取得', value: candidate.consentGiven ? `済（${candidate.consentDate}）` : '未取得' },
+                        { label: '電話番号', value: candidate.phone || '—' },
+                        { label: '現職', value: candidate.current_title ? `${candidate.current_company || ''} / ${candidate.current_title}` : '—' },
+                        { label: '流入元', value: candidate.source || '—' },
+                        { label: '登録日', value: candidate.created_at ? new Date(candidate.created_at).toLocaleDateString('ja-JP') : '—' },
+                        { label: 'ステータス', value: candidate.status || '—' },
                       ].map((item) => (
                         <div key={item.label}>
                           <p className="label mb-1">{item.label}</p>
@@ -252,24 +320,17 @@ export default function CandidateDetailPage() {
                       {upcomingInterviews.map((iv) => (
                         <div key={iv.id} className="mt-2">
                           <p className="text-sm text-amber-700">
-                            <strong>{iv.stageLabel}</strong> — {iv.scheduledAt}
+                            <strong>{iv.stage_label || getStageLabel(iv.stage)}</strong> — {iv.scheduled_at || '日程未定'}
                           </p>
-                          <p className="text-xs text-amber-600 mt-0.5">
-                            面接官: {iv.interviewers.join('、')}
-                          </p>
-                          {iv.attractPlan ? (
-                            <div className="flex gap-2 mt-2">
-                              <span className="badge bg-indigo-100 text-indigo-700">Attractプラン生成済</span>
-                              <Link href={`/candidates/${id}/brief`} className="badge bg-white text-amber-700 border border-amber-300 hover:bg-amber-50">
-                                → ブリーフを送付する
-                              </Link>
-                            </div>
-                          ) : (
-                            <Link href={`/candidates/${id}/attract`} className="inline-flex items-center gap-1 mt-2 text-xs text-amber-700 font-medium hover:text-amber-800">
-                              <Sparkles className="w-3 h-3" />
-                              Attractプランを生成する
-                            </Link>
+                          {iv.interviewers && iv.interviewers.length > 0 && (
+                            <p className="text-xs text-amber-600 mt-0.5">
+                              面接官: {iv.interviewers.join(', ')}
+                            </p>
                           )}
+                          <Link href={`/candidates/${id}/attract`} className="inline-flex items-center gap-1 mt-2 text-xs text-amber-700 font-medium hover:text-amber-800">
+                            <Sparkles className="w-3 h-3" />
+                            Attractプランを確認する
+                          </Link>
                         </div>
                       ))}
                     </div>
@@ -278,7 +339,7 @@ export default function CandidateDetailPage() {
               )}
 
               {/* Documents */}
-              {candidate.documents && candidate.documents.length > 0 && (
+              {candidate.candidate_documents && candidate.candidate_documents.length > 0 && (
                 <div className="card p-5">
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="section-title mb-0 flex items-center gap-2">
@@ -286,63 +347,24 @@ export default function CandidateDetailPage() {
                       アップロード書類
                     </h2>
                     <Link href={`/candidates/${id}/documents`} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                      書類管理 →
+                      書類管理
                     </Link>
                   </div>
                   <div className="space-y-2">
-                    {candidate.documents.map((doc) => (
+                    {candidate.candidate_documents.map((doc) => (
                       <div key={doc.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
                         <FileText className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-gray-800 truncate">{doc.fileName}</p>
-                          <p className="text-[10px] text-gray-400">{doc.fileSize} — {doc.uploadedAt}</p>
+                          <p className="text-xs font-medium text-gray-800 truncate">{doc.file_name}</p>
+                          <p className="text-[10px] text-gray-400">
+                            {doc.file_size || ''} {doc.uploaded_at ? `— ${new Date(doc.uploaded_at).toLocaleDateString('ja-JP')}` : ''}
+                          </p>
                         </div>
-                        {doc.parseStatus === 'parsed' && (
+                        {doc.parse_status === 'parsed' && (
                           <span className="badge bg-emerald-50 text-emerald-600 text-[10px]">AI解析済</span>
                         )}
                       </div>
                     ))}
-                  </div>
-                  {/* AI抽出スキル（書類から） */}
-                  {candidate.documents.some(d => d.parsedData) && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <p className="label mb-1.5">書類から抽出したスキル</p>
-                      <div className="flex flex-wrap gap-1">
-                        {[...new Set(candidate.documents.flatMap(d => d.parsedData?.keySkills ?? []))].slice(0, 8).map((skill, i) => (
-                          <span key={i} className="badge bg-blue-50 text-blue-600 text-[10px]">{skill}</span>
-                        ))}
-                        {[...new Set(candidate.documents.flatMap(d => d.parsedData?.keySkills ?? []))].length > 8 && (
-                          <Link href={`/candidates/${id}/documents`} className="badge bg-gray-50 text-gray-500 text-[10px]">
-                            +{[...new Set(candidate.documents.flatMap(d => d.parsedData?.keySkills ?? []))].length - 8}件
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Attract Strategy Summary */}
-              {app?.attractStrategy && (
-                <div className="card p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="section-title mb-0">Attract戦略サマリー</h2>
-                    <Link href={`/candidates/${id}/attract`} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                      詳細を見る →
-                    </Link>
-                  </div>
-                  <div className="bg-indigo-50 rounded-lg p-4 mb-4">
-                    <p className="text-xs font-medium text-indigo-500 mb-1">メイン訴求軸</p>
-                    <p className="text-sm font-semibold text-indigo-900">{app.attractStrategy.coreAngle}</p>
-                    <p className="text-xs text-indigo-700 mt-1.5 leading-relaxed">{app.attractStrategy.coreAngleRationale}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-2">サブ訴求軸</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {app.attractStrategy.subAngles.map((angle, i) => (
-                        <span key={i} className="badge bg-gray-100 text-gray-700">{angle}</span>
-                      ))}
-                    </div>
                   </div>
                 </div>
               )}
@@ -350,83 +372,6 @@ export default function CandidateDetailPage() {
 
             {/* Right: Quick Stats & Actions */}
             <div className="space-y-4">
-              {/* Hiring Score */}
-              {app?.candidateCard && (
-                <div className="card p-5">
-                  <p className="label mb-3">採用推薦スコア</p>
-                  <div className="flex items-end gap-2 mb-2">
-                    <span className="text-4xl font-bold text-gray-900">{app.candidateCard.hiringScore}</span>
-                    <span className="text-gray-400 mb-1">/100</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2 mb-3">
-                    <div
-                      className="bg-indigo-500 h-2 rounded-full"
-                      style={{ width: `${app.candidateCard.hiringScore}%` }}
-                    />
-                  </div>
-                  <span className={`badge ${
-                    app.candidateCard.recommendation === 'strong_yes' ? 'bg-emerald-100 text-emerald-700' :
-                    app.candidateCard.recommendation === 'yes' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {app.candidateCard.recommendation === 'strong_yes' ? '強く推薦' :
-                     app.candidateCard.recommendation === 'yes' ? '推薦' : '要検討'}
-                  </span>
-                </div>
-              )}
-
-              {/* AI予測分析 */}
-              {(() => {
-                const pred = PREDICTIONS[id] || { offerProb: 55, acceptProb: 65, motivationScore: 50, personaMatch: 50, interestLevel: 50, understandingLevel: 50 }
-                return (
-                  <div className="card p-5">
-                    <p className="label mb-3">AI予測分析</p>
-                    <div className="space-y-3">
-                      {/* 内定予測 */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1.5">
-                            <Target className="w-3 h-3 text-indigo-500" />
-                            <span className="text-[10px] text-gray-500">内定予測</span>
-                          </div>
-                          <span className="text-xs font-bold text-indigo-600">{pred.offerProb}%</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1.5">
-                          <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${pred.offerProb}%` }} />
-                        </div>
-                      </div>
-                      {/* 内定承諾確率（重要） */}
-                      <div className="bg-emerald-50 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1.5">
-                            <ThumbsUp className="w-3 h-3 text-emerald-600" />
-                            <span className="text-[10px] font-medium text-emerald-700">内定承諾確率</span>
-                          </div>
-                          <span className="text-sm font-bold text-emerald-700">{pred.acceptProb}%</span>
-                        </div>
-                        <div className="w-full bg-emerald-200 rounded-full h-2 mb-2">
-                          <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${pred.acceptProb}%` }} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {[
-                            { label: '志望度', value: pred.motivationScore },
-                            { label: 'ペルソナ一致', value: pred.personaMatch },
-                            { label: '興味度', value: pred.interestLevel },
-                            { label: '理解度', value: pred.understandingLevel },
-                          ].map((f, i) => (
-                            <div key={i} className="flex items-center justify-between">
-                              <span className="text-[9px] text-gray-500">{f.label}</span>
-                              <span className={`text-[10px] font-bold ${f.value >= 75 ? 'text-emerald-600' : f.value >= 55 ? 'text-amber-600' : 'text-red-500'}`}>{f.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-2">過去傾向・ターゲット一致率・興味度・理解度・志望度から算出</p>
-                  </div>
-                )
-              })()}
-
               {/* Quick Actions */}
               <div className="card p-5">
                 <p className="label mb-3">クイックアクション</p>
@@ -459,15 +404,15 @@ export default function CandidateDetailPage() {
                 </div>
               </div>
 
-              {/* Concerns */}
-              {app?.candidateCard?.remainingConcerns && (
+              {/* Work Experience */}
+              {candidate.work_experience && candidate.work_experience.length > 0 && (
                 <div className="card p-5">
-                  <p className="label mb-3">払拭すべき懸念</p>
+                  <p className="label mb-3">職歴</p>
                   <div className="space-y-2">
-                    {app.candidateCard.remainingConcerns.map((c, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-gray-600">{c}</p>
+                    {candidate.work_experience.map((exp, i) => (
+                      <div key={i} className="text-sm">
+                        <p className="font-medium text-gray-800">{exp.company}</p>
+                        <p className="text-xs text-gray-500">{exp.title} ({exp.years}年)</p>
                       </div>
                     ))}
                   </div>
@@ -480,124 +425,129 @@ export default function CandidateDetailPage() {
         {/* ======================== INTERVIEWS TAB ======================== */}
         {activeTab === 'interviews' && (
           <div className="space-y-4">
-            {app?.interviews.map((interview) => (
-              <div key={interview.id} className="card p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    {interview.status === 'completed' ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    ) : (
-                      <Clock className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                    )}
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">{interview.stageLabel}</h3>
-                      <p className="text-xs text-gray-400">{interview.scheduledAt} / {interview.format === 'online' ? 'オンライン' : '対面'}</p>
+            {interviews.length === 0 ? (
+              <div className="card p-8 text-center text-gray-400">
+                <Clock className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                <p className="text-sm">面接データがありません</p>
+              </div>
+            ) : (
+              interviews.map((interview) => (
+                <div key={interview.id} className="card p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      {interview.status === 'completed' ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                      ) : (
+                        <Clock className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                      )}
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          {interview.stage_label || getStageLabel(interview.stage)}
+                        </h3>
+                        <p className="text-xs text-gray-400">
+                          {interview.scheduled_at || '日程未定'} / {interview.format === 'online' ? 'オンライン' : interview.format === 'offline' ? '対面' : ''}
+                        </p>
+                      </div>
                     </div>
+                    <span className={`badge ${interview.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                      {interview.status === 'completed' ? '完了' : '予定'}
+                    </span>
                   </div>
-                  <span className={`badge ${interview.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                    {interview.status === 'completed' ? '完了' : '予定'}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="label mb-1">面接官</p>
-                    <div className="flex flex-wrap gap-1">
-                      {interview.interviewers.map((iv, i) => (
-                        <span key={i} className="badge bg-gray-100 text-gray-600">{iv}</span>
-                      ))}
-                    </div>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    {interview.interviewers && interview.interviewers.length > 0 && (
+                      <div>
+                        <p className="label mb-1">面接官</p>
+                        <div className="flex flex-wrap gap-1">
+                          {interview.interviewers.map((iv, i) => (
+                            <span key={i} className="badge bg-gray-100 text-gray-600">{iv}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {interview.evaluation && (
+                      <div>
+                        <p className="label mb-1">総合評価</p>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-4 h-4 ${s <= interview.evaluation!.overallScore ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`}
+                            />
+                          ))}
+                          <span className="text-xs text-gray-500 ml-1">{interview.evaluation.overallScore}/5</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
                   {interview.evaluation && (
-                    <div>
-                      <p className="label mb-1">総合評価</p>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star
-                            key={s}
-                            className={`w-4 h-4 ${s <= interview.evaluation!.overallScore ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`}
-                          />
+                    <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                      <p className="text-xs font-medium text-gray-500 mb-1">評価コメント</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{interview.evaluation.comment}</p>
+                      {interview.evaluation.concerns && (
+                        <div className="mt-2 flex items-start gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-amber-700">{interview.evaluation.concerns}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Handoff Notes */}
+                  {interview.handoff_notes && interview.handoff_notes.length > 0 && (
+                    <div className="border-t border-gray-100 pt-3 mt-3">
+                      <p className="text-xs font-medium text-gray-500 mb-2">次ステップへの申し送り事項</p>
+                      <div className="space-y-1.5">
+                        {interview.handoff_notes.map((note, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <ChevronRight className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-gray-600">{note}</p>
+                          </div>
                         ))}
-                        <span className="text-xs text-gray-500 ml-1">{interview.evaluation.overallScore}/5</span>
                       </div>
                     </div>
                   )}
-                </div>
 
-                {interview.evaluation && (
-                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                    <p className="text-xs font-medium text-gray-500 mb-1">評価コメント</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{interview.evaluation.comment}</p>
-                    {interview.evaluation.concerns && (
-                      <div className="mt-2 flex items-start gap-1.5">
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-700">{interview.evaluation.concerns}</p>
+                  {/* Letter Status */}
+                  {interview.feedback_letter && (
+                    <div className="border-t border-gray-100 pt-3 mt-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs text-gray-500">フィードバックレター:</span>
+                        <span className={`badge ${
+                          interview.feedback_letter.status === 'sent' ? 'bg-emerald-50 text-emerald-600' :
+                          interview.feedback_letter.status === 'reviewed' ? 'bg-amber-50 text-amber-600' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {interview.feedback_letter.status === 'sent' ? '送付済み' :
+                           interview.feedback_letter.status === 'reviewed' ? '確認済み' :
+                           '下書き'}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 面接官 評価入力フォーム */}
-                {interview.status === 'completed' && (
-                  <InterviewEvaluationForm
-                    interviewId={interview.id}
-                    hasExistingEval={!!interview.evaluation}
-                  />
-                )}
-
-                {/* Handoff Notes */}
-                {interview.handoffNotes && interview.handoffNotes.length > 0 && (
-                  <div className="border-t border-gray-100 pt-3 mt-3">
-                    <p className="text-xs font-medium text-gray-500 mb-2">次ステップへの申し送り事項</p>
-                    <div className="space-y-1.5">
-                      {interview.handoffNotes.map((note, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <ChevronRight className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
-                          <p className="text-xs text-gray-600">{note}</p>
-                        </div>
-                      ))}
+                      <Link
+                        href={`/candidates/${id}/feedback-letter?interview=${interview.id}`}
+                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        {interview.feedback_letter.status === 'sent' ? '内容を確認' : '送付する'}
+                      </Link>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Letter Status */}
-                {interview.feedbackLetter && (
-                  <div className="border-t border-gray-100 pt-3 mt-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-gray-400" />
-                      <span className="text-xs text-gray-500">フィードバックレター:</span>
-                      <span className={`badge ${
-                        interview.feedbackLetter.status === 'sent' ? 'bg-emerald-50 text-emerald-600' :
-                        interview.feedbackLetter.status === 'reviewed' ? 'bg-amber-50 text-amber-600' :
-                        'bg-gray-100 text-gray-500'
-                      }`}>
-                        {interview.feedbackLetter.status === 'sent' ? '送付済み' :
-                         interview.feedbackLetter.status === 'reviewed' ? '確認済み・未送付' :
-                         '下書き'}
-                      </span>
+                  {interview.status === 'completed' && !interview.feedback_letter && (
+                    <div className="border-t border-gray-100 pt-3 mt-3">
+                      <Link
+                        href={`/candidates/${id}/feedback-letter?interview=${interview.id}`}
+                        className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        フィードバックレターを生成する
+                      </Link>
                     </div>
-                    <Link
-                      href={`/candidates/${id}/feedback-letter?interview=${interview.id}`}
-                      className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                      {interview.feedbackLetter.status === 'sent' ? '内容を確認' : '送付する →'}
-                    </Link>
-                  </div>
-                )}
-
-                {interview.status === 'completed' && !interview.feedbackLetter && (
-                  <div className="border-t border-gray-100 pt-3 mt-3">
-                    <Link
-                      href={`/candidates/${id}/feedback-letter?interview=${interview.id}`}
-                      className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      フィードバックレターを生成する
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -608,21 +558,22 @@ export default function CandidateDetailPage() {
               <div className="card p-8 text-center text-gray-400">
                 <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-200" />
                 <p className="text-sm">シグナルデータがありません</p>
+                <p className="text-xs mt-1">面接後にシグナル入力を行うと、ここに表示されます</p>
               </div>
             ) : (
               <>
                 {/* Aggregated Career Values */}
                 <div className="card p-5">
-                  <h2 className="section-title">累積シグナル — キャリア価値観</h2>
+                  <h2 className="section-title">累積シグナル &#8212; キャリア価値観</h2>
                   <div className="space-y-3">
-                    {allSignals.flatMap((s) => s.careerValues).map((cv, i) => (
+                    {allSignals.flatMap((s) => s.careerValues || []).map((cv, i) => (
                       <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
                         <span className={`badge ${getSignalStrengthColor(cv.strength)}`}>
                           {getSignalStrengthLabel(cv.strength)}
                         </span>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-800">{cv.value}</p>
-                          <p className="text-xs text-gray-500 mt-0.5 italic">「{cv.evidence}」</p>
+                          <p className="text-xs text-gray-500 mt-0.5 italic">{cv.evidence}</p>
                         </div>
                       </div>
                     ))}
@@ -652,7 +603,7 @@ export default function CandidateDetailPage() {
                       <div>
                         <p className="label mb-2 text-emerald-600">好反応トピック</p>
                         <div className="space-y-2">
-                          {signal.positiveReactions.map((r, i) => (
+                          {(signal.positiveReactions || []).map((r, i) => (
                             <div key={i} className="bg-emerald-50 rounded-lg p-3">
                               <p className="text-xs font-medium text-emerald-800">{r.topic}</p>
                               <p className="text-xs text-emerald-600 mt-0.5">{r.description}</p>
@@ -665,7 +616,7 @@ export default function CandidateDetailPage() {
                       <div>
                         <p className="label mb-2 text-amber-600">懸念・不安</p>
                         <div className="space-y-2">
-                          {signal.concerns.map((c, i) => (
+                          {(signal.concerns || []).map((c, i) => (
                             <div key={i} className="bg-amber-50 rounded-lg p-3">
                               <div className="flex items-center gap-1.5 mb-0.5">
                                 <span className={`badge ${getSignalStrengthColor(c.severity)}`}>
@@ -683,7 +634,7 @@ export default function CandidateDetailPage() {
                     </div>
 
                     {/* Questions Asked */}
-                    {signal.questionsAsked.length > 0 && (
+                    {signal.questionsAsked && signal.questionsAsked.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-gray-100">
                         <p className="label mb-2">候補者からの質問</p>
                         <div className="space-y-1.5">
@@ -710,283 +661,18 @@ export default function CandidateDetailPage() {
 
         {/* ======================== CARD TAB ======================== */}
         {activeTab === 'card' && (
-          <div>
-            {app?.candidateCard ? (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">候補者カルテ</h2>
-                    <p className="text-xs text-gray-400">v{app.candidateCard.version} — {app.candidateCard.generatedAt} 生成</p>
-                  </div>
-                  <button className="btn-secondary text-sm">
-                    <FileText className="w-4 h-4" />
-                    PDF出力
-                  </button>
-                </div>
-
-                <div className="card p-6">
-                  <div className="flex items-start gap-4 mb-6 pb-6 border-b border-gray-100">
-                    <div className={`w-16 h-16 rounded-full ${candidate.avatarColor} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-2xl font-bold text-white">{candidate.avatarInitials[0]}</span>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">{candidate.fullName}</h3>
-                      <p className="text-sm text-gray-500">{candidate.currentTitle} / {candidate.currentCompany}（{candidate.yearsExperience}年）</p>
-                      <div className="mt-2 flex gap-2">
-                        <span className={`badge ${
-                          app.candidateCard.recommendation === 'strong_yes' ? 'bg-emerald-100 text-emerald-700' :
-                          app.candidateCard.recommendation === 'yes' ? 'bg-blue-100 text-blue-700' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {app.candidateCard.recommendation === 'strong_yes' ? '強く推薦' :
-                           app.candidateCard.recommendation === 'yes' ? '推薦' : '要検討'}
-                        </span>
-                        <span className="badge bg-indigo-100 text-indigo-700">
-                          スコア: {app.candidateCard.hiringScore}/100
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div>
-                      <p className="label mb-2">プロフィールサマリー</p>
-                      <p className="text-sm text-gray-700 leading-relaxed">{app.candidateCard.profileSummary}</p>
-                    </div>
-
-                    <div>
-                      <p className="label mb-2">経歴ハイライト</p>
-                      <ul className="space-y-1.5">
-                        {app.candidateCard.careerHighlights.map((h, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                            {h}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <p className="label mb-2">ステージ別印象</p>
-                      <div className="space-y-3">
-                        {app.candidateCard.impressionByStage.map((item, i) => (
-                          <div key={i} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                            <span className="badge bg-white border border-gray-200 text-gray-600 text-[10px] flex-shrink-0 h-fit">
-                              {item.stage}
-                            </span>
-                            <p className="text-sm text-gray-700">{item.impression}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="bg-indigo-50 rounded-lg p-4">
-                      <p className="text-xs font-medium text-indigo-500 mb-1">最も効く訴求角度</p>
-                      <p className="text-sm font-semibold text-indigo-900">{app.candidateCard.bestAttractAngle}</p>
-                    </div>
-
-                    <div>
-                      <p className="label mb-2 text-amber-600">残存懸念と払拭方針</p>
-                      <div className="space-y-2">
-                        {app.candidateCard.remainingConcerns.map((c, i) => (
-                          <div key={i} className="flex items-start gap-2 bg-amber-50 rounded-lg p-3">
-                            <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-amber-800">{c}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="border-t border-gray-100 pt-4">
-                      <p className="label mb-2">オファー推薦</p>
-                      <p className="text-sm text-gray-700 leading-relaxed">{app.candidateCard.offerRecommendation}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="card p-8 text-center">
-                <TrendingUp className="w-8 h-8 mx-auto mb-3 text-gray-200" />
-                <p className="text-sm text-gray-500 mb-4">まだカルテが生成されていません</p>
-                <button className="btn-primary">
-                  <Sparkles className="w-4 h-4" />
-                  AIカルテを生成する
-                </button>
-              </div>
-            )}
+          <div className="card p-8 text-center">
+            <TrendingUp className="w-8 h-8 mx-auto mb-3 text-gray-200" />
+            <p className="text-sm text-gray-500 mb-4">
+              AIカルテは面接データが蓄積されると自動生成されます
+            </p>
+            <Link href={`/candidates/${id}/signal-input`} className="btn-primary inline-flex">
+              <Sparkles className="w-4 h-4" />
+              シグナル入力を行う
+            </Link>
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-// 面接官 評価入力コンポーネント
-const EVAL_CRITERIA = [
-  { key: 'skill_match', label: 'スキルマッチ度', desc: '求めるスキルセットとの一致度' },
-  { key: 'culture_fit', label: 'カルチャーフィット', desc: '組織・チームへの適合性' },
-  { key: 'motivation', label: '志望度・意欲', desc: '入社への熱意と成長意欲' },
-  { key: 'communication', label: 'コミュニケーション', desc: '論理性・伝達力・傾聴力' },
-  { key: 'potential', label: 'ポテンシャル', desc: '将来的な成長余地と活躍可能性' },
-]
-
-function InterviewEvaluationForm({ interviewId, hasExistingEval }: { interviewId: string; hasExistingEval: boolean }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [scores, setScores] = useState<Record<string, number>>({})
-  const [comment, setComment] = useState('')
-  const [concerns, setConcerns] = useState('')
-  const [overallScore, setOverallScore] = useState(0)
-  const [submitted, setSubmitted] = useState(false)
-
-  const handleScoreChange = useCallback((key: string, value: number) => {
-    setScores(prev => ({ ...prev, [key]: value }))
-  }, [])
-
-  const handleSubmit = () => {
-    setSubmitted(true)
-    setTimeout(() => setIsOpen(false), 1500)
-  }
-
-  if (submitted) {
-    return (
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4 flex items-center gap-2">
-        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-        <span className="text-sm text-emerald-700 font-medium">評価が保存されました</span>
-      </div>
-    )
-  }
-
-  return (
-    <div className="mb-4">
-      {!isOpen ? (
-        <button
-          onClick={() => setIsOpen(true)}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed transition-colors ${
-            hasExistingEval
-              ? 'border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-500'
-              : 'border-indigo-300 text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
-          }`}
-        >
-          <Star className="w-4 h-4" />
-          <span className="text-sm font-medium">
-            {hasExistingEval ? '評価を編集する' : '面接官評価を入力する'}
-          </span>
-        </button>
-      ) : (
-        <div className="border border-indigo-200 rounded-xl bg-white shadow-sm overflow-hidden">
-          <div className="bg-indigo-50 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-indigo-600" />
-              <span className="text-sm font-semibold text-indigo-900">面接官評価入力</span>
-            </div>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 text-sm">
-              ✕
-            </button>
-          </div>
-
-          <div className="p-4 space-y-4">
-            {/* 評価軸ごとのスコア */}
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-3">評価軸別スコア</p>
-              <div className="space-y-3">
-                {EVAL_CRITERIA.map((criteria) => (
-                  <div key={criteria.key}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div>
-                        <span className="text-xs font-medium text-gray-700">{criteria.label}</span>
-                        <span className="text-[10px] text-gray-400 ml-1.5">{criteria.desc}</span>
-                      </div>
-                      <span className="text-xs font-bold text-indigo-600">
-                        {scores[criteria.key] || '-'}/5
-                      </span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => handleScoreChange(criteria.key, s)}
-                          className={`flex-1 h-8 rounded-lg text-xs font-medium transition-all ${
-                            s <= (scores[criteria.key] || 0)
-                              ? s >= 4 ? 'bg-indigo-500 text-white' : s >= 3 ? 'bg-indigo-300 text-white' : 'bg-amber-400 text-white'
-                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 総合評価 */}
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-2">総合評価</p>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setOverallScore(s)}
-                    className="p-1"
-                  >
-                    <Star
-                      className={`w-6 h-6 transition-colors ${
-                        s <= overallScore ? 'text-amber-400 fill-amber-400' : 'text-gray-200'
-                      }`}
-                    />
-                  </button>
-                ))}
-                <span className="text-sm text-gray-500 ml-2 self-center">
-                  {overallScore > 0 ? `${overallScore}/5` : '未選択'}
-                </span>
-              </div>
-            </div>
-
-            {/* 評価コメント */}
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">評価コメント</p>
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="面接の印象、候補者の強み、改善点などを自由にご記入ください"
-                rows={3}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              />
-            </div>
-
-            {/* 懸念事項 */}
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">懸念事項（あれば）</p>
-              <textarea
-                value={concerns}
-                onChange={(e) => setConcerns(e.target.value)}
-                placeholder="採用にあたって気になった点、確認が必要な事項など"
-                rows={2}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
-              />
-            </div>
-
-            {/* 送信ボタン */}
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={handleSubmit}
-                disabled={overallScore === 0}
-                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                評価を保存する
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="btn-secondary"
-              >
-                キャンセル
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
