@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Plus, Filter, Users, GraduationCap, Briefcase } from 'lucide-react'
+import { Search, Plus, Filter, Users, GraduationCap, Briefcase, Trash2 } from 'lucide-react'
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -241,12 +241,31 @@ export default function CandidatesPage() {
                         <p className="text-xs text-gray-500">{candidate.source || '—'}</p>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <Link
-                          href={`/candidates/${candidate.id}`}
-                          className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-                        >
-                          詳細を見る
-                        </Link>
+                        <div className="flex items-center justify-end gap-3">
+                          <Link
+                            href={`/candidates/${candidate.id}`}
+                            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                          >
+                            詳細を見る
+                          </Link>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm('この候補者を削除しますか？')) return
+                              try {
+                                const res = await fetch(`/api/candidates/${candidate.id}`, { method: 'DELETE' })
+                                if (res.ok) {
+                                  setCandidates(prev => prev.filter(c => c.id !== candidate.id))
+                                }
+                              } catch {
+                                // silently fail
+                              }
+                            }}
+                            className="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            削除
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )

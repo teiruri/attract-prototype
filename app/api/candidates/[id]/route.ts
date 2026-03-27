@@ -30,3 +30,24 @@ export async function GET(
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
+
+// 候補者削除
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const db = createServerClient()
+    const { id } = await context.params
+
+    const { error } = await db
+      .from('candidates')
+      .delete()
+      .eq('id', id)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}

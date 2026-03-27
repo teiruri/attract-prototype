@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Briefcase, Users, Sparkles, MapPin, Building2, Calendar, ChevronRight, ExternalLink, GraduationCap } from 'lucide-react'
+import { Plus, Briefcase, Users, Sparkles, MapPin, Building2, Calendar, ChevronRight, ExternalLink, GraduationCap, Pencil } from 'lucide-react'
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -183,6 +183,10 @@ export default function JobsPage() {
                         </div>
                       )}
                       <div className="flex gap-2">
+                        <Link href={`/jobs/${job.id}`} className="btn-secondary text-xs">
+                          <Pencil className="w-3.5 h-3.5" />
+                          編集
+                        </Link>
                         <Link href="/candidates" className="btn-secondary text-xs">
                           <Users className="w-3.5 h-3.5" />
                           候補者を見る
