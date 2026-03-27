@@ -1,171 +1,129 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Users,
   AlertCircle,
   CheckCircle2,
   Clock,
-  TrendingUp,
   ArrowRight,
   Sparkles,
-  Mail,
-  FileText,
-  GraduationCap,
-  Brain,
   Zap,
-  BarChart3,
-  Target,
-  UserCheck,
-  ThumbsUp,
-  Activity,
   Briefcase,
   ChevronDown,
-  Heart,
+  GraduationCap,
 } from 'lucide-react'
-import { candidates, getStageColor } from '@/lib/mock-data'
 
-// 求人マスター
-const JOBS = [
-  { id: 'job_001', title: 'シニアプロダクトマネージャー', type: 'midcareer' },
-  { id: 'job_002', title: 'プロダクトマネージャー（新卒2026）', type: 'newgrad' },
-  { id: 'job_003', title: 'UXデザイナー', type: 'midcareer' },
-]
+const TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
-// 候補者ごとの予測データ（デモ）
-// offerProb: 内定予測（志望度×ターゲットペルソナマッチ度から算出）
-// acceptProb: 内定承諾確率（過去傾向・ターゲット一致率・興味度・理解度・志望度から算出）
-// motivationScore: 志望度
-// personaMatch: ターゲットペルソナマッチ度
-const PREDICTIONS: Record<string, {
-  offerProb: number; acceptProb: number;
-  motivationScore: number; personaMatch: number;
-  interestLevel: number; understandingLevel: number;
-}> = {
-  cand_001: { offerProb: 78, acceptProb: 85, motivationScore: 82, personaMatch: 91, interestLevel: 88, understandingLevel: 75 },
-  cand_002: { offerProb: 45, acceptProb: 52, motivationScore: 55, personaMatch: 68, interestLevel: 60, understandingLevel: 48 },
-  cand_003: { offerProb: 82, acceptProb: 88, motivationScore: 85, personaMatch: 94, interestLevel: 90, understandingLevel: 82 },
-  cand_004: { offerProb: 61, acceptProb: 72, motivationScore: 70, personaMatch: 76, interestLevel: 75, understandingLevel: 65 },
+interface Candidate {
+  id: string
+  full_name: string
+  email: string
+  hiring_type: string
+  status: string
+  source: string
+  job_id: string
+  current_company?: string
+  current_title?: string
+  created_at: string
+  interviews?: Array<{ id: string; stage: string; status: string; result: string }>
 }
 
-function getPredColor(v: number) {
-  if (v >= 75) return { bar: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50' }
-  if (v >= 55) return { bar: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' }
-  return { bar: 'bg-red-400', text: 'text-red-700', bg: 'bg-red-50' }
+interface Job {
+  id: string
+  title: string
+  hiring_type: string
+  is_active: boolean
+}
+
+function getStageLabel(stage: string): string {
+  const labels: Record<string, string> = {
+    casual: 'カジュアル面談',
+    interview_1: '一次面接',
+    interview_2: '二次面接',
+    final: '最終面接',
+    offer: 'オファー',
+    hired: '内定承諾',
+    briefing: '説明会',
+    es: 'ES選考',
+    aptitude: '適性検査',
+    gd: 'GD',
+  }
+  return labels[stage] || stage
+}
+
+function getStageColor(stage: string): string {
+  const colors: Record<string, string> = {
+    casual: 'bg-gray-100 text-gray-600',
+    interview_1: 'bg-blue-50 text-blue-600',
+    interview_2: 'bg-indigo-50 text-indigo-600',
+    final: 'bg-purple-50 text-purple-600',
+    offer: 'bg-amber-50 text-amber-600',
+    hired: 'bg-emerald-50 text-emerald-600',
+  }
+  return colors[stage] || 'bg-gray-100 text-gray-600'
 }
 
 export default function Dashboard() {
-  const [selectedJobId, setSelectedJobId] = useState<string>('job_001')
+  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [jobDropdownOpen, setJobDropdownOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  const selectedJob = JOBS.find(j => j.id === selectedJobId)!
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [candRes, jobsRes] = await Promise.all([
+          fetch(`/api/candidates?tenant_id=${TENANT_ID}`),
+          fetch(`/api/jobs?tenant_id=${TENANT_ID}`),
+        ])
+        const candData = await candRes.json()
+        const jobsData = await jobsRes.json()
+        setCandidates(candData.candidates || [])
+        const fetchedJobs = jobsData.jobs || []
+        setJobs(fetchedJobs)
+        if (fetchedJobs.length > 0) {
+          setSelectedJobId(fetchedJobs[0].id)
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
-  // 選択された求人に紐づく候補者をフィルタ
-  const jobCandidates = candidates.filter(c =>
-    c.applications.some(a => a.jobId === selectedJobId && a.status === 'active')
-  )
+  const selectedJob = jobs.find(j => j.id === selectedJobId)
+
+  // Filter candidates by selected job
+  const jobCandidates = selectedJobId
+    ? candidates.filter(c => c.job_id === selectedJobId && c.status === 'active')
+    : candidates.filter(c => c.status === 'active')
 
   const totalActive = jobCandidates.length
-  const newgradCount = jobCandidates.filter(c => c.hiringType === 'newgrad').length
+  const newgradCount = jobCandidates.filter(c => c.hiring_type === 'new_graduate' || c.hiring_type === 'newgrad').length
   const midcareerCount = totalActive - newgradCount
 
-  // 動的に各ステージの候補者数を算出（求人フィルタ済み）
-  const computedStageStats = [
-    { label: 'カジュアル面談', key: 'casual', color: 'bg-gray-400' },
-    { label: '一次面接', key: 'interview_1', color: 'bg-blue-400' },
-    { label: '二次面接', key: 'interview_2', color: 'bg-indigo-400' },
-    { label: '最終面接', key: 'final', color: 'bg-purple-400' },
-    { label: 'オファー', key: 'offer', color: 'bg-amber-400' },
-  ].map(s => ({
-    ...s,
-    count: jobCandidates.filter(c =>
-      c.applications.some(a => a.jobId === selectedJobId && a.status === 'active' && a.currentStage === s.key)
-    ).length,
-  }))
-
-  // KPI算出
-  const actionItems = [
-    {
-      type: 'feedback_letter',
-      candidate: '田中 美咲',
-      candidateType: 'midcareer',
-      action: '一次面接の選考結果メールが未送付です',
-      urgency: 'high',
-      href: '/candidates/cand_001/feedback-letter?interview=int_002',
-      icon: Mail,
-    },
-    {
-      type: 'attract_plan',
-      candidate: '田中 美咲',
-      candidateType: 'midcareer',
-      action: '二次面接（3/15）のAttractプランを確認してください',
-      urgency: 'high',
-      href: '/candidates/cand_001/attract',
-      icon: Sparkles,
-    },
-    {
-      type: 'signal_input',
-      candidate: '田村 萌',
-      candidateType: 'newgrad',
-      action: '【新卒】カジュアル面談の録音データをアップロード→シグナル抽出してください',
-      urgency: 'high',
-      href: '/candidates/cand_004/signal-input',
-      icon: Brain,
-    },
-    {
-      type: 'feedback_letter',
-      candidate: '田村 萌',
-      candidateType: 'newgrad',
-      action: '【新卒】カジュアル面談の選考結果メールを生成・送付してください（A社選考中）',
-      urgency: 'high',
-      href: '/candidates/cand_004/feedback-letter',
-      icon: Mail,
-    },
-    {
-      type: 'brief',
-      candidate: '田中 美咲',
-      candidateType: 'midcareer',
-      action: '坂本代表・前田さんへの面接官ブリーフを送付してください',
-      urgency: 'medium',
-      href: '/candidates/cand_001/brief',
-      icon: FileText,
-    },
-    {
-      type: 'attract_plan',
-      candidate: '山本 健太',
-      candidateType: 'midcareer',
-      action: '最終面接（3/18）のAttractプランを生成してください',
-      urgency: 'medium',
-      href: '/candidates/cand_002/attract',
-      icon: Sparkles,
-    },
-  ]
-
-  // 求人に紐づくアクションのみフィルタ
-  const jobActionItems = actionItems.filter(item => {
-    const cand = candidates.find(c => c.fullName === item.candidate)
-    return cand ? cand.applications.some(a => a.jobId === selectedJobId && a.status === 'active') : false
-  })
-
-  // 内定予測人数（志望度×ターゲットペルソナマッチ度から算出、70%以上を内定見込みとしてカウント）
-  const jobPredictions = jobCandidates.map(c => ({ id: c.id, ...PREDICTIONS[c.id] })).filter(p => p.offerProb !== undefined)
-  const predictedOffers = jobPredictions.filter(p => p.offerProb >= 70).length
-  const predictedOffersTotal = jobPredictions.length
-  // 内定承諾予測（内定見込み者のうち承諾確率70%以上）
-  const predictedAcceptances = jobPredictions.filter(p => p.offerProb >= 70 && p.acceptProb >= 70).length
-
-  // 今日の日付を動的に取得
+  // Today's date
   const today = new Date()
   const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][today.getDay()]
   const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日（${dayOfWeek}）`
 
-  const stageStats = computedStageStats
-
-  // 選考ファネル指標 — 選択求人の候補者ベース・分母を明示
-  // 累計エントリー数（過去に辞退・不合格含む全候補者。デモでは選考中＋辞退分で計算）
-  const totalEntries = totalActive + (selectedJobId === 'job_001' ? 2 : selectedJobId === 'job_002' ? 1 : 0) // デモ: 過去辞退者を加算
-  const withdrawnCount = selectedJobId === 'job_001' ? 2 : selectedJobId === 'job_002' ? 1 : 0 // デモ: 選考辞退者数
+  if (loading) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">ダッシュボード</h1>
+        <p className="text-sm text-gray-500">{dateStr}</p>
+        <div className="flex items-center justify-center h-64">
+          <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-8">
@@ -177,51 +135,53 @@ export default function Dashboard() {
             <p className="text-sm text-gray-500 mt-1">{dateStr}</p>
           </div>
           {/* Job Selector */}
-          <div className="relative">
-            <button
-              onClick={() => setJobDropdownOpen(!jobDropdownOpen)}
-              className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 transition-colors"
-            >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedJob.type === 'newgrad' ? 'bg-pink-50' : 'bg-indigo-50'}`}>
-                <Briefcase className={`w-4 h-4 ${selectedJob.type === 'newgrad' ? 'text-pink-600' : 'text-indigo-600'}`} />
-              </div>
-              <div className="text-left">
-                <p className="text-xs text-gray-400">表示中の求人</p>
-                <p className="text-sm font-semibold text-gray-900">{selectedJob.title}</p>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${jobDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {jobDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
-                {JOBS.map(job => {
-                  const jobCandCount = candidates.filter(c => c.applications.some(a => a.jobId === job.id && a.status === 'active')).length
-                  return (
-                    <button
-                      key={job.id}
-                      onClick={() => { setSelectedJobId(job.id); setJobDropdownOpen(false) }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${selectedJobId === job.id ? 'bg-indigo-50' : ''}`}
-                    >
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${job.type === 'newgrad' ? 'bg-pink-50' : 'bg-indigo-50'}`}>
-                        <Briefcase className={`w-3.5 h-3.5 ${job.type === 'newgrad' ? 'text-pink-600' : 'text-indigo-600'}`} />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="text-sm font-medium text-gray-900">{job.title}</p>
-                        <p className="text-[10px] text-gray-400">選考中 {jobCandCount}名</p>
-                      </div>
-                      {selectedJobId === job.id && (
-                        <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+          {jobs.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setJobDropdownOpen(!jobDropdownOpen)}
+                className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 transition-colors"
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedJob?.hiring_type === 'new_graduate' ? 'bg-pink-50' : 'bg-indigo-50'}`}>
+                  <Briefcase className={`w-4 h-4 ${selectedJob?.hiring_type === 'new_graduate' ? 'text-pink-600' : 'text-indigo-600'}`} />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs text-gray-400">表示中の求人</p>
+                  <p className="text-sm font-semibold text-gray-900">{selectedJob?.title || '全体'}</p>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${jobDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {jobDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                  {jobs.map(job => {
+                    const jobCandCount = candidates.filter(c => c.job_id === job.id && c.status === 'active').length
+                    return (
+                      <button
+                        key={job.id}
+                        onClick={() => { setSelectedJobId(job.id); setJobDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${selectedJobId === job.id ? 'bg-indigo-50' : ''}`}
+                      >
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${job.hiring_type === 'new_graduate' ? 'bg-pink-50' : 'bg-indigo-50'}`}>
+                          <Briefcase className={`w-3.5 h-3.5 ${job.hiring_type === 'new_graduate' ? 'text-pink-600' : 'text-indigo-600'}`} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-gray-900">{job.title}</p>
+                          <p className="text-[10px] text-gray-400">選考中 {jobCandCount}名</p>
+                        </div>
+                        {selectedJobId === job.id && (
+                          <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         {/* 選考中 */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
@@ -240,338 +200,194 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 要対応タスク */}
+        {/* 求人数 */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="label">要対応タスク</span>
-            <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-4 h-4 text-amber-500" />
+            <span className="label">募集中の求人</span>
+            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+              <Briefcase className="w-4 h-4 text-emerald-600" />
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <p className="text-3xl font-bold text-gray-900">{jobActionItems.filter(i => i.urgency === 'high').length}</p>
+            <p className="text-3xl font-bold text-gray-900">{jobs.filter(j => j.is_active).length}</p>
             <span className="text-sm text-gray-400">件</span>
           </div>
-          <p className="text-xs text-gray-400 mt-1">うち高優先 {jobActionItems.filter(i => i.urgency === 'high').length}件</p>
+          <p className="text-xs text-gray-400 mt-1">全{jobs.length}件中</p>
         </div>
 
-        {/* 内定予測 */}
+        {/* 全候補者 */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="label">内定予測</span>
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <Target className="w-4 h-4 text-emerald-600" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <p className="text-3xl font-bold text-emerald-600">{predictedOffers}</p>
-            <span className="text-sm text-gray-400">人</span>
-            <span className="text-xs text-gray-300 ml-1">/ {predictedOffersTotal}人中</span>
-          </div>
-          <p className="text-xs text-gray-400 mt-1">志望度×ペルソナマッチ度からAI算出</p>
-        </div>
-
-        {/* 内定承諾予測 */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="label">内定承諾予測</span>
+            <span className="label">総候補者数</span>
             <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
-              <Heart className="w-4 h-4 text-violet-600" />
+              <Users className="w-4 h-4 text-violet-600" />
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <p className="text-3xl font-bold text-violet-600">{predictedAcceptances}</p>
+            <p className="text-3xl font-bold text-gray-900">{candidates.length}</p>
             <span className="text-sm text-gray-400">人</span>
-            <span className="text-xs text-gray-300 ml-1">/ 内定予測{predictedOffers}人中</span>
           </div>
-          <p className="text-xs text-gray-400 mt-1">過去傾向・興味度・理解度・志望度からAI算出</p>
+          <p className="text-xs text-gray-400 mt-1">全求人合計</p>
         </div>
       </div>
 
       {/* Efficiency Banner */}
-      <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-4 mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-white">今月のAI業務効率化レポート</p>
-            <p className="text-xs text-indigo-200">HR FARM AIによる自動化で採用担当の工数を削減しています</p>
-          </div>
+      <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-4 mb-8 flex items-center gap-3">
+        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+          <Zap className="w-5 h-5 text-white" />
         </div>
-        <div className="flex items-center gap-6">
-          {[
-            { label: 'シグナル抽出', saved: '2.5時間', count: '5回' },
-            { label: 'レター生成', saved: '4時間', count: '4通' },
-            { label: 'ブリーフ作成', saved: '1.5時間', count: '3件' },
-          ].map((item, i) => (
-            <div key={i} className="text-center">
-              <p className="text-lg font-bold text-white">{item.saved}</p>
-              <p className="text-[10px] text-indigo-200">{item.label}節約（{item.count}）</p>
-            </div>
-          ))}
-          <div className="w-px h-10 bg-white/20" />
-          <div className="text-center">
-            <p className="text-2xl font-bold text-yellow-300">8時間</p>
-            <p className="text-[10px] text-indigo-200">今月の総節約時間</p>
-          </div>
+        <div>
+          <p className="text-sm font-bold text-white">HR FARM — AI採用プラットフォーム</p>
+          <p className="text-xs text-indigo-200">候補者の惹きつけ、シグナル分析、フィードバックレター生成をAIが支援します</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Action Items */}
-        <div className="col-span-2 space-y-6">
-          <div className="card">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">要対応タスク</h2>
-              <span className="badge bg-amber-50 text-amber-600">{jobActionItems.length}件</span>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {jobActionItems.map((item, i) => {
-                const Icon = item.icon
-                return (
-                  <div key={i} className="px-5 py-4 flex items-start gap-3 hover:bg-gray-50 transition-colors">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      item.urgency === 'high' ? 'bg-red-50' : 'bg-amber-50'
-                    }`}>
-                      <Icon className={`w-4 h-4 ${item.urgency === 'high' ? 'text-red-500' : 'text-amber-500'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-medium text-gray-900">{item.candidate}</span>
-                        {item.urgency === 'high' && (
-                          <span className="badge bg-red-50 text-red-600">要対応</span>
-                        )}
-                        {item.candidateType === 'newgrad' && (
-                          <span className="badge bg-pink-50 text-pink-700">
-                            <GraduationCap className="w-2.5 h-2.5 mr-0.5" />新卒
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600">{item.action}</p>
-                    </div>
+      {candidates.length === 0 && jobs.length === 0 ? (
+        /* Empty State */
+        <div className="card p-12 text-center">
+          <Users className="w-12 h-12 mx-auto mb-4 text-gray-200" />
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">まだデータがありません</h2>
+          <p className="text-sm text-gray-500 mb-6">求人を登録し、候補者を追加してHR FARMを始めましょう</p>
+          <div className="flex justify-center gap-3">
+            <Link href="/jobs" className="btn-primary">
+              <Briefcase className="w-4 h-4" />
+              求人を登録
+            </Link>
+            <Link href="/candidates/new" className="btn-secondary">
+              <Users className="w-4 h-4" />
+              候補者を追加
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-6">
+          {/* Candidate List */}
+          <div className="col-span-2">
+            <div className="card">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-900">
+                  {selectedJob ? `${selectedJob.title} の候補者` : '候補者一覧'}
+                </h2>
+                <span className="badge bg-indigo-50 text-indigo-600">{jobCandidates.length}名</span>
+              </div>
+              {jobCandidates.length === 0 ? (
+                <div className="p-8 text-center text-gray-400">
+                  <Users className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                  <p className="text-sm">この求人にはまだ候補者がいません</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {jobCandidates.slice(0, 10).map((c) => (
                     <Link
-                      href={item.href}
-                      className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium flex-shrink-0"
+                      key={c.id}
+                      href={`/candidates/${c.id}`}
+                      className="px-5 py-4 flex items-center gap-3 hover:bg-gray-50 transition-colors block"
                     >
-                      対応する
-                      <ArrowRight className="w-3 h-3" />
+                      <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-indigo-700">
+                          {(c.full_name || '?')[0]}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900">{c.full_name}</p>
+                          {(c.hiring_type === 'new_graduate' || c.hiring_type === 'newgrad') && (
+                            <span className="badge bg-pink-50 text-pink-700 text-[10px]">
+                              <GraduationCap className="w-2.5 h-2.5 mr-0.5" />
+                              新卒
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 truncate">{c.current_title || c.email}</p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-gray-300" />
                     </Link>
-                  </div>
-                )
-              })}
+                  ))}
+                </div>
+              )}
+              {jobCandidates.length > 10 && (
+                <div className="px-5 py-3 border-t border-gray-100 text-center">
+                  <Link href="/candidates" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                    すべての候補者を見る ({jobCandidates.length}名)
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 選考ファネル分析 */}
-          <div className="card">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-indigo-600" />
-              <h2 className="text-sm font-semibold text-gray-900">選考ファネル分析</h2>
-              <span className="text-[10px] text-gray-400 ml-auto">この求人の累計データ</span>
-            </div>
-            <div className="p-5 space-y-5">
-              {/* ファネル — 分母を明示 */}
-              <div className="space-y-2">
-                {[
-                  {
-                    label: 'エントリー',
-                    count: totalEntries,
-                    total: totalEntries,
-                    color: 'bg-indigo-500',
-                    desc: 'この求人への累計応募者数',
-                  },
-                  {
-                    label: '選考中',
-                    count: totalActive,
-                    total: totalEntries,
-                    color: 'bg-blue-500',
-                    desc: `エントリー${totalEntries}人のうち現在選考中`,
-                  },
-                  {
-                    label: '選考辞退',
-                    count: withdrawnCount,
-                    total: totalEntries,
-                    color: 'bg-amber-500',
-                    desc: `エントリー${totalEntries}人のうち候補者都合で辞退`,
-                  },
-                  {
-                    label: '内定予測',
-                    count: predictedOffers,
-                    total: totalActive,
-                    color: 'bg-emerald-500',
-                    desc: `選考中${totalActive}人のうちAIが内定見込みと判定`,
-                  },
-                  {
-                    label: '承諾予測',
-                    count: predictedAcceptances,
-                    total: predictedOffers,
-                    color: 'bg-violet-500',
-                    desc: `内定予測${predictedOffers}人のうちAIが承諾見込みと判定`,
-                  },
-                ].map((step, i) => {
-                  const pct = step.total > 0 ? Math.round((step.count / step.total) * 100) : 0
-                  const barWidth = totalEntries > 0 ? Math.max(8, Math.round((step.count / totalEntries) * 100)) : 0
-                  return (
-                    <div key={i} className="group">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-gray-700">{step.label}</span>
-                          <span className="text-[10px] text-gray-400">{step.desc}</span>
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-sm font-bold text-gray-900">{step.count}</span>
-                          <span className="text-[10px] text-gray-400">人</span>
-                          {step.label !== 'エントリー' && (
-                            <span className="text-[10px] text-gray-300 ml-1">({pct}%)</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${step.color} transition-all`} style={{ width: `${barWidth}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Jobs */}
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-900">求人一覧</h2>
+                <Link href="/jobs" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                  すべて見る
+                </Link>
               </div>
-
-              {/* AIプレディクション */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Activity className="w-3.5 h-3.5 text-indigo-500" />
-                  <span className="text-xs font-semibold text-gray-900">候補者別 AIプレディクション</span>
-                </div>
-                <div className="space-y-3">
-                  {jobCandidates.map((c) => {
-                    const cApp = c.applications.find(a => a.jobId === selectedJobId) || c.applications[0]
-                    const pred = PREDICTIONS[c.id] || { offerProb: 50, acceptProb: 60, motivationScore: 50, personaMatch: 50, interestLevel: 50, understandingLevel: 50 }
-                    const pColor = getPredColor(pred.offerProb)
-                    const aColor = getPredColor(pred.acceptProb)
-                    const stageName = cApp?.currentStage === 'casual' ? 'カジュアル面談' :
-                      cApp?.currentStage === 'interview_1' ? '一次面接' :
-                      cApp?.currentStage === 'interview_2' ? '二次面接' :
-                      cApp?.currentStage === 'final' ? '最終面接' : cApp?.currentStage
+              {jobs.length === 0 ? (
+                <p className="text-xs text-gray-400">求人がありません</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {jobs.slice(0, 5).map((job) => {
+                    const count = candidates.filter(c => c.job_id === job.id && c.status === 'active').length
                     return (
-                      <div key={c.id} className="p-3 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className={`w-7 h-7 rounded-full ${c.avatarColor} flex items-center justify-center flex-shrink-0`}>
-                            <span className="text-[10px] font-bold text-white">{c.avatarInitials[0]}</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-gray-900">{c.fullName}</span>
-                              <span className="text-[10px] text-gray-400">{stageName}</span>
-                            </div>
-                          </div>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${pColor.bg} ${pColor.text} font-medium`}>
-                            {pred.offerProb >= 75 ? '内定見込み' : pred.offerProb >= 55 ? '中確率' : '要フォロー'}
-                          </span>
+                      <button
+                        key={job.id}
+                        onClick={() => setSelectedJobId(job.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left ${
+                          selectedJobId === job.id ? 'bg-indigo-50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <Briefcase className={`w-4 h-4 flex-shrink-0 ${selectedJobId === job.id ? 'text-indigo-600' : 'text-gray-400'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900 truncate">{job.title}</p>
+                          <p className="text-[10px] text-gray-400">{count}名選考中</p>
                         </div>
-                        {/* 2つの確率バー */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <div className="flex items-center justify-between mb-0.5">
-                              <span className="text-[10px] text-gray-500">内定予測</span>
-                              <span className={`text-[10px] font-bold ${pColor.text}`}>{pred.offerProb}%</span>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${pColor.bar}`} style={{ width: `${pred.offerProb}%` }} />
-                            </div>
-                          </div>
-                          <div>
-                            <div className="flex items-center justify-between mb-0.5">
-                              <span className="text-[10px] text-gray-500">内定承諾確率</span>
-                              <span className={`text-[10px] font-bold ${aColor.text}`}>{pred.acceptProb}%</span>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${aColor.bar}`} style={{ width: `${pred.acceptProb}%` }} />
-                            </div>
-                          </div>
-                        </div>
-                        {/* 算出根拠 */}
-                        <div className="flex gap-2 mt-2">
-                          {[
-                            { label: '志望度', value: pred.motivationScore },
-                            { label: 'ペルソナ一致', value: pred.personaMatch },
-                            { label: '興味度', value: pred.interestLevel },
-                            { label: '理解度', value: pred.understandingLevel },
-                          ].map((factor, fi) => (
-                            <div key={fi} className="flex-1 text-center">
-                              <p className={`text-[10px] font-bold ${factor.value >= 75 ? 'text-indigo-600' : factor.value >= 55 ? 'text-amber-600' : 'text-red-500'}`}>
-                                {factor.value}
-                              </p>
-                              <p className="text-[9px] text-gray-400">{factor.label}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                        {job.is_active ? (
+                          <span className="badge bg-emerald-50 text-emerald-600 text-[10px]">募集中</span>
+                        ) : (
+                          <span className="badge bg-gray-100 text-gray-400 text-[10px]">停止</span>
+                        )}
+                      </button>
                     )
                   })}
                 </div>
-                <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  候補者のカルテ・選考履歴をAIが分析し、確率を自動算出しています
-                </p>
+              )}
+            </div>
+
+            {/* Recent Candidates */}
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-900">最近の候補者</h2>
+                <Link href="/candidates" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                  すべて見る
+                </Link>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* Pipeline */}
-          <div className="card p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">選考パイプライン</h2>
-            <div className="space-y-2.5">
-              {stageStats.map((s) => (
-                <div key={s.label} className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.color}`} />
-                  <span className="text-xs text-gray-600 flex-1">{s.label}</span>
-                  <span className="text-sm font-semibold text-gray-900 w-5 text-right">{s.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Candidates */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900">候補者一覧</h2>
-              <Link href="/candidates" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                すべて見る
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {jobCandidates.map((c) => {
-                const app = c.applications.find(a => a.jobId === selectedJobId) || c.applications[0]
-                return (
+              <div className="space-y-3">
+                {candidates.slice(0, 5).map((c) => (
                   <Link
                     key={c.id}
                     href={`/candidates/${c.id}`}
                     className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                   >
-                    <div className={`w-8 h-8 rounded-full ${c.avatarColor} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-xs font-bold text-white">{c.avatarInitials[0]}</span>
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-indigo-700">{(c.full_name || '?')[0]}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-900 truncate">{c.fullName}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{c.currentTitle}</p>
+                      <p className="text-xs font-medium text-gray-900 truncate">{c.full_name}</p>
+                      <p className="text-[10px] text-gray-400 truncate">{c.current_title || c.email}</p>
                     </div>
-                    {app && (
-                      <span className={`badge text-[10px] ${getStageColor(app.currentStage)}`}>
-                        {app.currentStage === 'casual' ? 'カジュアル' :
-                         app.currentStage === 'interview_1' ? '一次' :
-                         app.currentStage === 'interview_2' ? '二次' :
-                         app.currentStage === 'final' ? '最終' : app.currentStage}
-                      </span>
-                    )}
                   </Link>
-                )
-              })}
+                ))}
+                {candidates.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-4">候補者がいません</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

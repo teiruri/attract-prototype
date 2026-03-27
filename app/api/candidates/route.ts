@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const db = createServerClient()
     const { searchParams } = new URL(req.url)
+    const tenantId = searchParams.get('tenant_id')
     const jobId = searchParams.get('job_id')
     const status = searchParams.get('status')
 
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
       .select('*, candidate_documents(id, document_type, file_name), interviews(id, stage, result)')
       .order('created_at', { ascending: false })
 
+    if (tenantId) query = query.eq('tenant_id', tenantId)
     if (jobId) query = query.eq('job_id', jobId)
     if (status) query = query.eq('status', status)
 

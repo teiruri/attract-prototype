@@ -1,17 +1,95 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sparkles, Plus, Trash2, CheckCircle2, Save, BarChart3, ArrowRight } from 'lucide-react'
-import { companyAttractionProfile } from '@/lib/mock-data'
+
+interface CompanyProfile {
+  id?: string
+  company_name?: string
+  industry?: string
+  company_size?: string
+  mission?: string
+  vision?: string
+  values?: string[]
+  evp?: {
+    hiring_concept?: string
+    target_persona?: string
+    items?: Array<{ category: string; content: string; icon: string }>
+  }
+  culture_keywords?: string[]
+  attraction_points?: Array<{
+    point: string
+    evidence: string
+    target_segments: string[]
+  }>
+}
 
 export default function AttractionProfilePage() {
-  const [profile] = useState(companyAttractionProfile)
+  const [profile, setProfile] = useState<CompanyProfile | null>(null)
+  const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
+  const [hiringConcept, setHiringConcept] = useState('')
+  const [targetPersona, setTargetPersona] = useState('')
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch('/api/company-profile')
+        const data = await res.json()
+        if (data.profile) {
+          setProfile(data.profile)
+          setHiringConcept(data.profile.evp?.hiring_concept || data.profile.mission || '')
+          setTargetPersona(data.profile.evp?.target_persona || '')
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProfile()
+  }, [])
+
+  const handleSave = async () => {
+    try {
+      const body = {
+        tenant_id: '00000000-0000-0000-0000-000000000001',
+        company_name: profile?.company_name || '',
+        industry: profile?.industry || '',
+        company_size: profile?.company_size || '',
+        mission: profile?.mission || '',
+        vision: profile?.vision || '',
+        values: profile?.values || [],
+        evp: {
+          ...(profile?.evp || {}),
+          hiring_concept: hiringConcept,
+          target_persona: targetPersona,
+        },
+        culture_keywords: profile?.culture_keywords || [],
+        attraction_points: profile?.attraction_points || [],
+      }
+      await fetch('/api/company-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      // silently fail
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">企業魅力・採用コンセプト設定</h1>
+        <div className="flex items-center justify-center h-64">
+          <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -27,11 +105,6 @@ export default function AttractionProfilePage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/settings/evp-survey" className="btn-secondary">
-            <BarChart3 className="w-4 h-4 text-emerald-600" />
-            Recruiting-EVP連携
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
           <button onClick={handleSave} className="btn-primary">
             {saved ? (
               <><CheckCircle2 className="w-4 h-4" />保存しました</>
@@ -42,23 +115,15 @@ export default function AttractionProfilePage() {
         </div>
       </div>
 
-      {/* EVP Survey Banner */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-emerald-800">Recruiting-EVPサーベイ連携済み</p>
-              <p className="text-xs text-emerald-600">最終連携: 2025年3月10日 ／ 社員42名・退職者8名・候補者15名の回答データから生成</p>
-            </div>
-          </div>
-          <Link href="/settings/evp-survey" className="text-xs text-emerald-700 font-medium hover:text-emerald-800 flex items-center gap-1">
-            サーベイ結果を確認 <ArrowRight className="w-3 h-3" />
-          </Link>
+      {!profile ? (
+        <div className="card p-12 text-center">
+          <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-200" />
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">企業プロフィールが未設定です</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            採用コンセプトとEVPを設定して、AIの出力品質を高めましょう
+          </p>
         </div>
-      </div>
+      ) : null}
 
       <div className="space-y-6 max-w-4xl">
         {/* Hiring Concept */}
@@ -68,7 +133,9 @@ export default function AttractionProfilePage() {
             「なぜこの会社で働くのか」を一言で定義します。AIはこれを軸に訴求を設計します。
           </p>
           <textarea
-            defaultValue={profile.hiringConcept}
+            value={hiringConcept}
+            onChange={(e) => setHiringConcept(e.target.value)}
+            placeholder="例: 「意思決定できるPMを、もっと速く」— 大企業で埋もれているプロダクト思考のある人材が、ここでは入社3ヶ月で担当プロダクトを持ち、自らの意思で動かせる。"
             rows={3}
             className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
           />
@@ -85,124 +152,89 @@ export default function AttractionProfilePage() {
             採用したい人物像を具体的に記述します。AIはシグナルとの照合に使用します。
           </p>
           <textarea
-            defaultValue={profile.targetPersona}
+            value={targetPersona}
+            onChange={(e) => setTargetPersona(e.target.value)}
+            placeholder="例: 事業会社でのプロダクトマネジメント経験3年以上。戦略思考と実行力を両立できる人材。"
             rows={4}
             className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
           />
         </div>
 
-        {/* EVP */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="section-title mb-0">EVP（従業員価値提案）</h2>
-              <p className="text-xs text-gray-400 mt-0.5">企業が従業員に提供できる価値を項目別に整理します</p>
-            </div>
-            <button className="btn-secondary text-xs">
-              <Plus className="w-3.5 h-3.5" />
-              追加
-            </button>
-          </div>
-          <div className="space-y-3">
-            {profile.evp.map((evp, i) => (
-              <div key={i} className="flex gap-3 p-4 bg-gray-50 rounded-lg">
-                <span className="text-xl">{evp.icon}</span>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    defaultValue={evp.category}
-                    className="text-sm font-semibold text-gray-800 bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none focus:border-indigo-400 w-full mb-1.5 pb-0.5"
-                  />
-                  <textarea
-                    defaultValue={evp.content}
-                    rows={2}
-                    className="w-full text-sm text-gray-600 bg-transparent border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-                <button className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+        {/* EVP Items */}
+        {profile?.evp?.items && profile.evp.items.length > 0 && (
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="section-title mb-0">EVP（従業員価値提案）</h2>
+                <p className="text-xs text-gray-400 mt-0.5">企業が従業員に提供できる価値を項目別に整理します</p>
               </div>
-            ))}
+            </div>
+            <div className="space-y-3">
+              {profile.evp.items.map((evp, i) => (
+                <div key={i} className="flex gap-3 p-4 bg-gray-50 rounded-lg">
+                  <span className="text-xl">{evp.icon}</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-800 mb-1.5">{evp.category}</p>
+                    <p className="text-sm text-gray-600">{evp.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Appeal Points */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="section-title mb-0">アピールポイント</h2>
-              <p className="text-xs text-gray-400 mt-0.5">候補者に訴求できる具体的な魅力と、それを裏付ける証拠を整理します</p>
-            </div>
-            <button className="btn-secondary text-xs">
-              <Plus className="w-3.5 h-3.5" />
-              追加
-            </button>
-          </div>
-          <div className="space-y-3">
-            {profile.appealPoints.map((point, i) => (
-              <div key={i} className="p-4 border border-gray-200 rounded-lg">
-                <div className="flex gap-3 mb-3">
-                  <div className="flex-1">
-                    <label className="label mb-1 block">アピールポイント</label>
-                    <input
-                      type="text"
-                      defaultValue={point.point}
-                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <button className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 mt-6">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="mb-3">
-                  <label className="label mb-1 block">根拠・エビデンス</label>
-                  <input
-                    type="text"
-                    defaultValue={point.evidence}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="label mb-1 block">対象セグメント（刺さる候補者像）</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {point.targetSegments.map((seg, j) => (
-                      <span key={j} className="badge bg-indigo-50 text-indigo-600 cursor-pointer hover:bg-red-50 hover:text-red-500 transition-colors">
-                        {seg} ×
-                      </span>
-                    ))}
-                    <button className="badge bg-gray-100 text-gray-500 hover:bg-gray-200">
-                      <Plus className="w-3 h-3 mr-1" />追加
-                    </button>
-                  </div>
-                </div>
+        {profile?.attraction_points && profile.attraction_points.length > 0 && (
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="section-title mb-0">アピールポイント</h2>
+                <p className="text-xs text-gray-400 mt-0.5">候補者に訴求できる具体的な魅力と、それを裏付ける証拠を整理します</p>
               </div>
-            ))}
+            </div>
+            <div className="space-y-3">
+              {profile.attraction_points.map((point, i) => (
+                <div key={i} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="mb-2">
+                    <label className="label mb-1 block">アピールポイント</label>
+                    <p className="text-sm text-gray-800">{point.point}</p>
+                  </div>
+                  <div className="mb-2">
+                    <label className="label mb-1 block">根拠・エビデンス</label>
+                    <p className="text-sm text-gray-700">{point.evidence}</p>
+                  </div>
+                  {point.target_segments && point.target_segments.length > 0 && (
+                    <div>
+                      <label className="label mb-1 block">対象セグメント</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {point.target_segments.map((seg, j) => (
+                          <span key={j} className="badge bg-indigo-50 text-indigo-600">
+                            {seg}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Culture Keywords */}
-        <div className="card p-6">
-          <h2 className="section-title">カルチャーキーワード</h2>
-          <p className="text-xs text-gray-400 mb-3">会社の文化・価値観を表すキーワードを設定します。AIがコミュニケーションのトーンを調整します。</p>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {profile.cultureKeywords.map((kw, i) => (
-              <span key={i} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium cursor-pointer hover:bg-red-50 hover:text-red-500 transition-colors">
-                {kw} ×
-              </span>
-            ))}
+        {profile?.culture_keywords && profile.culture_keywords.length > 0 && (
+          <div className="card p-6">
+            <h2 className="section-title">カルチャーキーワード</h2>
+            <p className="text-xs text-gray-400 mb-3">会社の文化・価値観を表すキーワードを設定します。</p>
+            <div className="flex flex-wrap gap-2">
+              {profile.culture_keywords.map((kw, i) => (
+                <span key={i} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                  {kw}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="キーワードを追加..."
-              className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button className="btn-secondary text-xs">
-              <Plus className="w-3.5 h-3.5" />追加
-            </button>
-          </div>
-        </div>
+        )}
 
         <div className="flex justify-end">
           <button onClick={handleSave} className="btn-primary px-8">

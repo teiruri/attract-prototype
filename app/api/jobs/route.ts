@@ -4,13 +4,20 @@ import { createServerClient } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 
 // 求人一覧取得
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const db = createServerClient()
-    const { data, error } = await db
+    const { searchParams } = new URL(req.url)
+    const tenantId = searchParams.get('tenant_id')
+
+    let query = db
       .from('jobs')
       .select('*')
       .order('created_at', { ascending: false })
+
+    if (tenantId) query = query.eq('tenant_id', tenantId)
+
+    const { data, error } = await query
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ jobs: data })

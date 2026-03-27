@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap, Eye, EyeOff, ArrowRight, Shield, Sparkles } from 'lucide-react'
+import { Zap, Eye, EyeOff, ArrowRight, Shield, Sparkles, UserPlus } from 'lucide-react'
+import { getSupabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,9 +25,49 @@ export default function LoginPage() {
 
     setIsLoading(true)
 
-    // デモ用: 1秒後にダッシュボードへ遷移
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    router.push('/')
+    try {
+      const supabase = getSupabase()
+
+      if (mode === 'signup') {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        })
+        if (signUpError) {
+          setError(signUpError.message)
+          setIsLoading(false)
+          return
+        }
+        setError('')
+        // Some Supabase configs auto-confirm; try logging in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (signInError) {
+          // Likely needs email confirmation
+          setError('アカウントを作成しました。メールを確認してログインしてください。')
+          setIsLoading(false)
+          return
+        }
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (signInError) {
+          setError('メールアドレスまたはパスワードが正しくありません')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      router.push('/')
+      router.refresh()
+    } catch (err) {
+      setError('ログインに失敗しました。もう一度お試しください。')
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -46,8 +88,14 @@ export default function LoginPage() {
 
           {/* Welcome */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">おかえりなさい</h1>
-            <p className="text-sm text-gray-500">アカウントにログインして、採用活動を続けましょう</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              {mode === 'login' ? 'おかえりなさい' : 'アカウント作成'}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {mode === 'login'
+                ? 'アカウントにログインして、採用活動を続けましょう'
+                : '新しいアカウントを作成して、HR FARMを始めましょう'}
+            </p>
           </div>
 
           {/* Form */}
@@ -66,9 +114,11 @@ export default function LoginPage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-medium text-gray-700">パスワード</label>
-                <button type="button" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                  パスワードを忘れた場合
-                </button>
+                {mode === 'login' && (
+                  <button type="button" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                    パスワードを忘れた場合
+                  </button>
+                )}
               </div>
               <div className="relative">
                 <input
@@ -101,26 +151,42 @@ export default function LoginPage() {
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
+              ) : mode === 'login' ? (
                 <>
                   ログイン
                   <ArrowRight className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  アカウントを作成
                 </>
               )}
             </button>
           </form>
 
-          {/* Divider */}
+          {/* Toggle login/signup */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-[10px] text-gray-400">または</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
-          {/* SSO */}
-          <button className="w-full flex items-center justify-center gap-2 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl text-sm transition-colors">
-            <Shield className="w-4 h-4 text-gray-500" />
-            SSO（シングルサインオン）でログイン
+          <button
+            onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
+            className="w-full flex items-center justify-center gap-2 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl text-sm transition-colors"
+          >
+            {mode === 'login' ? (
+              <>
+                <UserPlus className="w-4 h-4 text-gray-500" />
+                新しいアカウントを作成
+              </>
+            ) : (
+              <>
+                <Shield className="w-4 h-4 text-gray-500" />
+                既存のアカウントでログイン
+              </>
+            )}
           </button>
 
           {/* Footer */}
