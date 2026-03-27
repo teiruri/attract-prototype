@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Zap, Eye, EyeOff, ArrowRight, Shield, Sparkles, UserPlus } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const confirmed = searchParams.get('confirmed') === 'true'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -97,6 +99,14 @@ export default function LoginPage() {
                 : '新しいアカウントを作成して、HR FARMを始めましょう'}
             </p>
           </div>
+
+          {confirmed && (
+            <div className="mb-4">
+              <p className="text-sm text-emerald-700 font-medium bg-emerald-50 rounded-xl px-4 py-3">
+                メール認証が完了しました。ログインしてください。
+              </p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5">

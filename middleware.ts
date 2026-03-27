@@ -4,7 +4,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow login page and API routes without auth
-  if (pathname === '/login' || pathname.startsWith('/api')) {
+  if (pathname === '/login' || pathname.startsWith('/api') || pathname.startsWith('/auth')) {
     return NextResponse.next()
   }
 
