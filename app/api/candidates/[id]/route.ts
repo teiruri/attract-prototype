@@ -6,11 +6,11 @@ export const dynamic = 'force-dynamic'
 // 候補者詳細取得
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = createServerClient()
-    const { id } = params
+    const { id } = await context.params
 
     const { data, error } = await db
       .from('candidates')

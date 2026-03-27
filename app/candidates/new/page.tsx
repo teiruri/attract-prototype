@@ -68,6 +68,7 @@ export default function NewCandidatePage() {
   const [docPhase, setDocPhase] = useState<DocPhase>('idle')
   const [docError, setDocError] = useState('')
   const [docResults, setDocResults] = useState<DocResult[]>([])
+  const [mergedData, setMergedData] = useState<ExtractedData | null>(null)
   const docFilesRef = useRef<File[]>([])
   const docInputRef = useRef<HTMLInputElement>(null)
 
@@ -118,7 +119,7 @@ export default function NewCandidatePage() {
     setDocResults(initialResults)
     setDocPhase('parsing')
 
-    // Process files sequentially
+    // Process files sequentially (extract only, no DB save)
     const updatedResults = [...initialResults]
     for (let i = 0; i < validFiles.length; i++) {
       updatedResults[i] = { ...updatedResults[i], status: 'parsing' }
@@ -127,6 +128,7 @@ export default function NewCandidatePage() {
       try {
         const formData = new FormData()
         formData.append('file', validFiles[i])
+        formData.append('save', 'false') // 抽出のみ、DB保存しない
 
         const res = await fetch('/api/candidates/import-document', {
           method: 'POST',
@@ -152,8 +154,68 @@ export default function NewCandidatePage() {
     if (docInputRef.current) docInputRef.current.value = ''
   }
 
-  const handleCreateAllCandidates = () => {
-    setDocPhase('done')
+  const handleCreateAllCandidates = async () => {
+    // Merge all extracted data into one candidate
+    const allExtracted = docResults
+      .filter(r => r.status === 'done' && r.extracted)
+      .map(r => r.extracted!)
+
+    if (allExtracted.length === 0) return
+
+    const merged: ExtractedData = {}
+    for (const data of allExtracted) {
+      // First non-null value wins for simple fields
+      if (!merged.full_name && data.full_name) merged.full_name = data.full_name
+      if (!merged.email && data.email) merged.email = data.email
+      if (!merged.phone && data.phone) merged.phone = data.phone
+      if (!merged.current_company && data.current_company) merged.current_company = data.current_company
+      if (!merged.current_title && data.current_title) merged.current_title = data.current_title
+      if (!merged.university && data.university) merged.university = data.university
+      if (!merged.faculty && data.faculty) merged.faculty = data.faculty
+      // Merge arrays (deduplicate skills)
+      if (data.skills?.length) {
+        merged.skills = [...new Set([...(merged.skills || []), ...data.skills])]
+      }
+      if (data.work_experience?.length) {
+        merged.work_experience = [...(merged.work_experience || []), ...data.work_experience]
+      }
+      // Combine summaries
+      if (data.summary) {
+        merged.summary = merged.summary ? `${merged.summary} ${data.summary}` : data.summary
+      }
+    }
+
+    setDocPhase('saving')
+
+    try {
+      const res = await fetch('/api/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: '00000000-0000-0000-0000-000000000001',
+          full_name: merged.full_name || '氏名不明',
+          email: merged.email || null,
+          phone: merged.phone || null,
+          source: 'document_import',
+          hiring_type: (merged.work_experience?.length ?? 0) > 0 ? 'mid_career' : 'new_graduate',
+          university: merged.university || null,
+          faculty: merged.faculty || null,
+          work_experience: merged.work_experience || [],
+        }),
+      })
+
+      if (!res.ok) {
+        setDocError('候補者の登録に失敗しました')
+        setDocPhase('preview')
+        return
+      }
+
+      setMergedData(merged)
+      setDocPhase('done')
+    } catch {
+      setDocError('候補者の登録に失敗しました')
+      setDocPhase('preview')
+    }
   }
 
   const successCount = docResults.filter(r => r.status === 'done').length
@@ -445,10 +507,17 @@ export default function NewCandidatePage() {
                       {successCount > 0 && (
                         <button onClick={handleCreateAllCandidates} className="btn-primary">
                           <Sparkles className="w-4 h-4" />
-                          {successCount}名を候補者として登録
+                          {successCount}件の書類から1名の候補者を登録
                         </button>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {docPhase === 'saving' && (
+                  <div className="py-6 text-center">
+                    <Loader2 className="w-6 h-6 text-indigo-500 animate-spin mx-auto mb-3" />
+                    <p className="text-sm font-bold text-gray-900">候補者を登録中...</p>
                   </div>
                 )}
 
@@ -457,10 +526,12 @@ export default function NewCandidatePage() {
                     <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <CheckCircle2 className="w-7 h-7 text-emerald-600" />
                     </div>
-                    <p className="text-base font-bold text-gray-900 mb-1">{successCount}名の候補者を登録しました！</p>
-                    <p className="text-sm text-gray-500 mb-4">候補者一覧から確認できます</p>
+                    <p className="text-base font-bold text-gray-900 mb-1">候補者を登録しました！</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {mergedData?.full_name || '候補者'}（{docResults.filter(r => r.status === 'done').length}件の書類から統合）
+                    </p>
                     <div className="flex items-center justify-center gap-3">
-                      <button onClick={() => { setDocPhase('idle'); setDocResults([]) }} className="btn-secondary">
+                      <button onClick={() => { setDocPhase('idle'); setDocResults([]); setMergedData(null) }} className="btn-secondary">
                         続けて取り込む
                       </button>
                       <Link href="/candidates" className="btn-primary">

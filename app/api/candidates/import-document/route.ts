@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     const jobId = formData.get('job_id') as string | null
+    const saveToDb = formData.get('save') !== 'false' // default: save
 
     if (!file) {
       return NextResponse.json({ error: 'ファイルが指定されていません' }, { status: 400 })
@@ -170,6 +171,11 @@ export async function POST(req: NextRequest) {
         },
         { status: 500 }
       )
+    }
+
+    // If save=false, just return extracted data (for multi-doc merge)
+    if (!saveToDb) {
+      return NextResponse.json({ extracted })
     }
 
     // Insert into candidates table
