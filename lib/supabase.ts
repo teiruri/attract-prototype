@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 let _client: SupabaseClient | null = null
 let _serverClient: SupabaseClient | null = null
@@ -11,7 +12,7 @@ function getAnonKey() {
   return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 }
 
-// ブラウザ用クライアント（遅延初期化）
+// ブラウザ用クライアント（@supabase/ssr - cookieベース認証）
 export function getSupabase(): SupabaseClient {
   const url = getUrl()
   const key = getAnonKey()
@@ -19,7 +20,7 @@ export function getSupabase(): SupabaseClient {
     throw new Error('Supabase が設定されていません。.env.local に NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY を設定してください。')
   }
   if (!_client) {
-    _client = createClient(url, key)
+    _client = createBrowserClient(url, key) as unknown as SupabaseClient
   }
   return _client
 }

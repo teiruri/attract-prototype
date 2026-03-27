@@ -25,13 +25,16 @@ function LoginForm() {
   const [success, setSuccess] = useState('')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
 
-  // ログインページ表示時に既存セッションをクリア
+  // ログインページに直接アクセスした場合のみセッションクリア
   useEffect(() => {
-    try {
-      const supabase = getSupabase()
-      supabase.auth.signOut()
-    } catch {
-      // ignore
+    const params = new URLSearchParams(window.location.search)
+    if (!params.get('confirmed')) {
+      try {
+        const supabase = getSupabase()
+        supabase.auth.signOut()
+      } catch {
+        // ignore
+      }
     }
   }, [])
 
