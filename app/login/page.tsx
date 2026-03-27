@@ -51,15 +51,17 @@ function LoginForm() {
       const supabase = getSupabase()
 
       if (mode === 'signup') {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
         })
-        if (signUpError) {
-          setError(signUpError.message)
+        const result = await res.json()
+        if (!res.ok) {
+          setError(result.error || 'アカウント作成に失敗しました')
           return
         }
-        setSuccess('アカウントを作成しました。確認メールを送信しましたので、メール内のリンクをクリックしてからログインしてください。')
+        setSuccess('アカウントを作成しました！登録したメールアドレスとパスワードでログインしてください。')
         setMode('login')
         return
       } else {
