@@ -1,36 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createMiddlewareClient } from '@/lib/supabase-server'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow login page and API routes without auth
+  // Allow public paths without auth check
   if (pathname === '/login' || pathname.startsWith('/api') || pathname.startsWith('/auth')) {
     return NextResponse.next()
   }
 
-  // Allow static files and Next.js internals
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.includes('.')
-  ) {
-    return NextResponse.next()
-  }
+  const { supabase, response } = createMiddlewareClient(request)
 
-  // Check for Supabase auth cookie (sb-*-auth-token)
-  const cookies = request.cookies.getAll()
-  const hasAuthCookie = cookies.some(
-    (cookie) => cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')
-  )
+  // Verify the session by calling getUser (server-side validation)
+  const { data: { user }, error } = await supabase.auth.getUser()
 
-  if (!hasAuthCookie) {
+  if (error || !user) {
     const loginUrl = new URL('/login', request.url)
     return NextResponse.redirect(loginUrl)
   }
 
-  return NextResponse.next()
+  return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

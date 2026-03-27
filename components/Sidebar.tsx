@@ -34,8 +34,7 @@ export default function Sidebar() {
     } catch {
       // ignore errors
     }
-    router.push('/login')
-    router.refresh()
+    window.location.href = '/login'
   }
 
   return (

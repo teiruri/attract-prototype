@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Zap, Eye, EyeOff, ArrowRight, Shield, Sparkles, UserPlus } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
@@ -16,6 +16,16 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
+
+  // ログインページ表示時に既存セッションをクリア
+  useEffect(() => {
+    try {
+      const supabase = getSupabase()
+      supabase.auth.signOut()
+    } catch {
+      // ignore
+    }
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,11 +49,9 @@ export default function LoginPage() {
         })
         if (signUpError) {
           setError(signUpError.message)
-          setIsLoading(false)
           return
         }
         setSuccess('アカウントを作成しました。確認メールを送信しましたので、メール内のリンクをクリックしてからログインしてください。')
-        setIsLoading(false)
         setMode('login')
         return
       } else {
@@ -53,15 +61,14 @@ export default function LoginPage() {
         })
         if (signInError) {
           setError('メールアドレスまたはパスワードが正しくありません')
-          setIsLoading(false)
           return
         }
       }
 
-      router.push('/')
-      router.refresh()
+      window.location.href = '/'
     } catch (err) {
       setError('ログインに失敗しました。もう一度お試しください。')
+    } finally {
       setIsLoading(false)
     }
   }
