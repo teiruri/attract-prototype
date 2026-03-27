@@ -77,10 +77,10 @@ export default function JobsPage() {
             募集ポジションの登録・管理 — {jobs.filter(j => j.is_active).length}件 募集中 / {jobs.length}件 合計
           </p>
         </div>
-        <button className="btn-primary">
+        <Link href="/jobs/new" className="btn-primary">
           <Plus className="w-4 h-4" />
           求人を登録
-        </button>
+        </Link>
       </div>
 
       {jobs.length === 0 ? (
@@ -88,10 +88,10 @@ export default function JobsPage() {
           <Briefcase className="w-12 h-12 mx-auto mb-4 text-gray-200" />
           <h2 className="text-lg font-semibold text-gray-900 mb-2">求人がありません</h2>
           <p className="text-sm text-gray-500 mb-6">求人を登録して採用活動を始めましょう</p>
-          <button className="btn-primary inline-flex">
+          <Link href="/jobs/new" className="btn-primary inline-flex">
             <Plus className="w-4 h-4" />
             求人を登録
-          </button>
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-6">

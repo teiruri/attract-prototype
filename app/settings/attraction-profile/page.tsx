@@ -30,7 +30,6 @@ export default function AttractionProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [hiringConcept, setHiringConcept] = useState('')
-  const [targetPersona, setTargetPersona] = useState('')
 
   useEffect(() => {
     async function fetchProfile() {
@@ -40,7 +39,6 @@ export default function AttractionProfilePage() {
         if (data.profile) {
           setProfile(data.profile)
           setHiringConcept(data.profile.evp?.hiring_concept || data.profile.mission || '')
-          setTargetPersona(data.profile.evp?.target_persona || '')
         }
       } catch {
         // silently fail
@@ -64,7 +62,6 @@ export default function AttractionProfilePage() {
         evp: {
           ...(profile?.evp || {}),
           hiring_concept: hiringConcept,
-          target_persona: targetPersona,
         },
         culture_keywords: profile?.culture_keywords || [],
         attraction_points: profile?.attraction_points || [],
@@ -143,21 +140,6 @@ export default function AttractionProfilePage() {
             <Sparkles className="w-3 h-3" />
             良い採用コンセプト例: 具体的なエピソード・数字を含み、ターゲットが「これは自分のことだ」と感じられる内容
           </p>
-        </div>
-
-        {/* Target Persona */}
-        <div className="card p-6">
-          <h2 className="section-title">ターゲットペルソナ定義</h2>
-          <p className="text-xs text-gray-400 mb-3">
-            採用したい人物像を具体的に記述します。AIはシグナルとの照合に使用します。
-          </p>
-          <textarea
-            value={targetPersona}
-            onChange={(e) => setTargetPersona(e.target.value)}
-            placeholder="例: 事業会社でのプロダクトマネジメント経験3年以上。戦略思考と実行力を両立できる人材。"
-            rows={4}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
-          />
         </div>
 
         {/* EVP Items */}
