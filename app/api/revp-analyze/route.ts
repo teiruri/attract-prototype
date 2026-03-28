@@ -18,7 +18,13 @@ export async function POST(req: NextRequest) {
     }
 
     const anthropic = new Anthropic({ apiKey })
+
+    console.log('revp-analyze: Processing file:', file.name, 'size:', file.size, 'type:', file.type)
+
     const arrayBuffer = await file.arrayBuffer()
+    if (arrayBuffer.byteLength === 0) {
+      return NextResponse.json({ error: 'ファイルが空です' }, { status: 400 })
+    }
 
     const ext = file.name.split('.').pop()?.toLowerCase()
     let userContent: Anthropic.MessageCreateParams['messages'][0]['content']
@@ -62,13 +68,22 @@ export async function POST(req: NextRequest) {
 
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
+      console.error('revp-analyze: JSON extraction failed. Raw text:', responseText)
       return NextResponse.json({ error: 'JSONの抽出に失敗しました', raw_text: responseText }, { status: 500 })
     }
 
-    const revpData = JSON.parse(jsonMatch[0])
+    let revpData
+    try {
+      revpData = JSON.parse(jsonMatch[0])
+    } catch (parseErr) {
+      console.error('revp-analyze: JSON parse failed:', parseErr, 'Matched text:', jsonMatch[0])
+      return NextResponse.json({ error: 'JSONのパースに失敗しました', raw_text: responseText }, { status: 500 })
+    }
     return NextResponse.json({ revp_data: revpData, raw_text: responseText })
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    console.error('revp-analyze error:', err)
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: message, detail: String(err) }, { status: 500 })
   }
 }
 

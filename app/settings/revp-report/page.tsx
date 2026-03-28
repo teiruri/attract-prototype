@@ -97,6 +97,11 @@ export default function RevpReportPage() {
         body: formData,
       })
       const json = await res.json()
+      if (!res.ok) {
+        console.error('REVP analyze error:', json)
+        alert(`ファイルの解析に失敗しました: ${json.error || res.statusText}`)
+        return
+      }
       if (json.revp_data) {
         setData(prev => ({
           ...prev,
@@ -104,8 +109,9 @@ export default function RevpReportPage() {
           raw_text: json.raw_text || prev.raw_text,
         }))
       }
-    } catch {
-      alert('ファイルの解析に失敗しました')
+    } catch (err) {
+      console.error('REVP upload error:', err)
+      alert('ファイルの解析に失敗しました。ネットワーク接続を確認してください。')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''

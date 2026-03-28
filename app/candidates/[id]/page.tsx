@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  ClipboardCheck,
   MessageSquare,
   TrendingUp,
   User,
@@ -269,6 +270,15 @@ export default function CandidateDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const searchParams = useSearchParams()
+
+  // Read tab from URL query parameter
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'interviews') setActiveTab('interviews')
+    else if (tab === 'signals') setActiveTab('signals')
+    else if (tab === 'card') setActiveTab('card')
+  }, [searchParams])
 
   // Interview editing state
   const [expandedInterviews, setExpandedInterviews] = useState<Set<string>>(new Set())
@@ -922,6 +932,73 @@ export default function CandidateDetailPage() {
                   </div>
                 ) : (
                   <p className="text-sm text-gray-400">面接データはまだありません</p>
+                )}
+              </div>
+
+              {/* Interview Evaluation CTA */}
+              <div className="card p-5 border-l-4 border-l-indigo-500">
+                {interviews.length === 0 || interviews.every(i => !i.result || i.result === 'pending') ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <ClipboardCheck className="w-5 h-5 text-indigo-500" />
+                      <h2 className="text-sm font-bold text-gray-900">面接評価</h2>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {interviews.length === 0
+                        ? 'まだ評価が入力されていません。'
+                        : '評価待ちの面接があります。'}
+                      面接後に評価を入力することで、合格通知やシナリオの精度が向上します。
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('interviews')}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                      面接評価を入力する
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <ClipboardCheck className="w-5 h-5 text-indigo-500" />
+                      <h2 className="text-sm font-bold text-gray-900">最新の面接評価</h2>
+                    </div>
+                    {(() => {
+                      const latestIv = [...interviews].reverse().find(i => i.result && i.result !== 'pending')
+                      if (!latestIv) return null
+                      const badge = getResultBadge(latestIv.result, latestIv.interviewer_evaluation)
+                      return (
+                        <div className="space-y-1.5 mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-700 font-medium">{getStageLabel(latestIv.stage)}:</span>
+                            <span className={`badge ${badge.color}`}>{badge.label}</span>
+                            {latestIv.interview_date && (
+                              <span className="text-xs text-gray-400">({latestIv.interview_date})</span>
+                            )}
+                          </div>
+                          {latestIv.interviewer_name && (
+                            <p className="text-xs text-gray-500">面接官: {latestIv.interviewer_name}</p>
+                          )}
+                        </div>
+                      )
+                    })()}
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => { setShowNewForm(true); setActiveTab('interviews') }}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                      >
+                        次の選考を追加する
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('interviews')}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        評価詳細を見る
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
 

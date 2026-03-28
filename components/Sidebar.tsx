@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
+  ClipboardCheck,
   Briefcase,
   Sparkles,
   BarChart3,
@@ -17,6 +18,7 @@ import { getSupabase } from '@/lib/supabase'
 const navItems = [
   { label: 'ダッシュボード', href: '/', icon: LayoutDashboard },
   { label: '候補者管理', href: '/candidates', icon: Users },
+  { label: '選考管理', href: '/selection', icon: ClipboardCheck },
   { label: '求人管理', href: '/jobs', icon: Briefcase },
   { label: '企業魅力設定', href: '/settings/attraction-profile', icon: Sparkles },
   { label: 'REVP診断', href: '/settings/revp-report', icon: BarChart3 },
