@@ -295,15 +295,21 @@ export default function CandidateDetailPage() {
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set())
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
+  // Signals state
+  const [signals, setSignals] = useState<any[]>([])
+  const [signalsLoading, setSignalsLoading] = useState(false)
+
   useEffect(() => {
     async function fetchData() {
       try {
-        const [candidateRes, interviewRes] = await Promise.all([
+        const [candidateRes, interviewRes, signalRes] = await Promise.all([
           fetch(`/api/candidates/${id}`),
           fetch(`/api/candidates/${id}/interviews`),
+          fetch(`/api/candidates/${id}/signals`),
         ])
         const candidateData = await candidateRes.json()
         const interviewData = await interviewRes.json()
+        const signalData = await signalRes.json()
 
         if (candidateRes.ok && candidateData.candidate) {
           setCandidate(candidateData.candidate)
@@ -313,6 +319,10 @@ export default function CandidateDetailPage() {
 
         if (interviewRes.ok && interviewData.interviews) {
           setInterviews(interviewData.interviews)
+        }
+
+        if (signalRes.ok && signalData.signals) {
+          setSignals(signalData.signals)
         }
       } catch {
         setError('データの取得に失敗しました')
@@ -555,12 +565,12 @@ export default function CandidateDetailPage() {
   const currentStage = candidate.current_stage || candidate.status
   const isNewgrad = candidate.hiring_type === 'new_graduate' || candidate.hiring_type === 'newgrad'
   const completedInterviews = interviews.filter(i => i.result && i.result !== 'pending')
-  const allSignals: any[] = [] // signals not loaded from interviews API
+  const allSignals = signals.map(s => s.content).filter(Boolean)
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: '概要' },
     { id: 'interviews', label: `面接（${interviews.length}）` },
-    { id: 'signals', label: 'シグナル' },
+    { id: 'signals', label: `シグナル${signals.length > 0 ? `（${signals.length}）` : ''}` },
     { id: 'card', label: 'AIカルテ' },
   ]
 
@@ -1060,6 +1070,11 @@ export default function CandidateDetailPage() {
                     <span className="text-sm text-gray-700">次回面接シナリオ</span>
                     <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
                   </Link>
+                  <Link href={`/candidates/${id}/signal-input`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-violet-300 hover:bg-violet-50 transition-colors">
+                    <Brain className="w-4 h-4 text-violet-500" />
+                    <span className="text-sm text-gray-700">候補者シグナル</span>
+                    <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
+                  </Link>
                   <Link href={`/candidates/${id}/documents`} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                     <Upload className="w-4 h-4 text-indigo-500" />
                     <span className="text-sm text-gray-700">書類管理・AI解析</span>
@@ -1274,11 +1289,201 @@ export default function CandidateDetailPage() {
         {/* ======================== SIGNALS TAB ======================== */}
         {activeTab === 'signals' && (
           <div className="space-y-6">
-            <div className="card p-8 text-center text-gray-400">
-              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-200" />
-              <p className="text-sm">シグナルデータがありません</p>
-              <p className="text-xs mt-1">面接後にシグナル入力を行うと、ここに表示されます</p>
-            </div>
+            {signals.length === 0 ? (
+              <div className="card p-8 text-center text-gray-400">
+                <Brain className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                <p className="text-sm">シグナルデータがありません</p>
+                <p className="text-xs mt-1 mb-4">面接の録画/書き起こし、アンケート、事前資料からAIがシグナルを抽出します</p>
+                <Link href={`/candidates/${id}/signal-input`} className="btn-primary inline-flex">
+                  <Sparkles className="w-4 h-4" />
+                  候補者シグナルを抽出
+                </Link>
+              </div>
+            ) : (
+              <>
+                {/* Signal generation button */}
+                <div className="flex justify-end">
+                  <Link href={`/candidates/${id}/signal-input`} className="btn-secondary text-sm">
+                    <Sparkles className="w-4 h-4" />
+                    新しいシグナルを抽出
+                  </Link>
+                </div>
+
+                {signals.map((sig, sigIdx) => {
+                  const s = sig.content
+                  if (!s) return null
+                  return (
+                    <div key={sig.id || sigIdx} className="space-y-4">
+                      {/* Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Brain className="w-5 h-5 text-violet-500" />
+                          <h3 className="text-sm font-bold text-gray-900">
+                            シグナル #{signals.length - sigIdx}
+                          </h3>
+                          <span className="text-xs text-gray-400">
+                            {sig.created_at ? new Date(sig.created_at).toLocaleDateString('ja-JP') : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      {s.summary && (
+                        <div className="card p-4 border-l-4 border-gray-400">
+                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">総合サマリー</p>
+                          <p className="text-sm text-gray-800 leading-relaxed">{s.summary}</p>
+                        </div>
+                      )}
+
+                      {/* Attract Angle */}
+                      {s.attractAngle && (
+                        <div className="card p-4 border-l-4 border-indigo-500 bg-indigo-50">
+                          <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide mb-1 flex items-center gap-1">
+                            <Target className="w-3.5 h-3.5" />
+                            最適Attract軸
+                          </p>
+                          <p className="text-sm font-semibold text-indigo-900">{s.attractAngle}</p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-3 gap-4">
+                        {/* Career Values */}
+                        <div className="col-span-2 space-y-3">
+                          {s.careerValues?.length > 0 && (
+                            <div className="card p-4">
+                              <p className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                                <Activity className="w-3.5 h-3.5 text-rose-500" />
+                                キャリア価値観 ({s.careerValues.length})
+                              </p>
+                              <div className="space-y-2">
+                                {s.careerValues.map((cv: any, i: number) => (
+                                  <div key={i} className="bg-gray-50 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-xs font-bold text-gray-900">{cv.value}</span>
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${getSignalStrengthColor(cv.strength)}`}>
+                                        {getSignalStrengthLabel(cv.strength)}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-600 leading-relaxed">{cv.evidence}</p>
+                                    {cv.evpMatch && (
+                                      <p className="text-[10px] text-indigo-600 mt-1">EVP: {cv.evpMatch}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Positive Reactions */}
+                          {s.positiveReactions?.length > 0 && (
+                            <div className="card p-4">
+                              <p className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                                ポジティブ反応 ({s.positiveReactions.length})
+                              </p>
+                              <div className="space-y-2">
+                                {s.positiveReactions.map((pr: any, i: number) => (
+                                  <div key={i} className={`rounded-lg p-3 ${
+                                    pr.matchStrength === 'very_strong' ? 'border-l-4 border-emerald-400 bg-emerald-50' :
+                                    pr.matchStrength === 'strong' ? 'border-l-4 border-blue-400 bg-blue-50' :
+                                    'border-l-4 border-gray-300 bg-gray-50'
+                                  }`}>
+                                    <p className="text-[11px] font-bold text-gray-800">{pr.topic}</p>
+                                    <p className="text-[11px] text-gray-600">{pr.reaction}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Concerns */}
+                          {s.concerns?.length > 0 && (
+                            <div className="card p-4">
+                              <p className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                                懸念事項 ({s.concerns.length})
+                              </p>
+                              <div className="space-y-2">
+                                {s.concerns.map((c: any, i: number) => (
+                                  <div key={i} className="bg-gray-50 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-[11px] font-bold text-gray-800">{c.concern}</span>
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                                        c.severity === 'high' ? 'bg-red-100 text-red-700' :
+                                        c.severity === 'medium' ? 'bg-amber-100 text-amber-700' :
+                                        'bg-gray-100 text-gray-600'
+                                      }`}>
+                                        {c.severity === 'high' ? '高' : c.severity === 'medium' ? '中' : '低'}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-600">{c.status}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right column */}
+                        <div className="space-y-3">
+                          {/* Energy Level */}
+                          {s.energyLevel && (
+                            <div className="card p-4">
+                              <p className="text-xs font-bold text-gray-500 mb-2">エネルギーレベル</p>
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map(n => (
+                                  <div key={n} className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
+                                    n <= s.energyLevel ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-300'
+                                  }`}>{n}</div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Questions */}
+                          {s.questionsAsked?.length > 0 && (
+                            <div className="card p-4">
+                              <p className="text-xs font-bold text-gray-500 mb-2">候補者からの質問</p>
+                              <div className="space-y-1.5">
+                                {s.questionsAsked.map((q: string, i: number) => (
+                                  <p key={i} className="text-[11px] text-gray-700 flex items-start gap-1.5">
+                                    <MessageSquare className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    {q}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Urgent Actions */}
+                          {s.urgentActions?.length > 0 && (
+                            <div className="card p-4">
+                              <p className="text-xs font-bold text-red-600 mb-2 flex items-center gap-1">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                緊急アクション
+                              </p>
+                              <div className="space-y-1.5">
+                                {s.urgentActions.map((a: any, i: number) => (
+                                  <div key={i} className={`text-[11px] p-2 rounded-lg border ${
+                                    a.priority === 'high' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                                  }`}>
+                                    {a.priority === 'high' ? '🔴' : '🟡'} {a.action}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {sigIdx < signals.length - 1 && (
+                        <hr className="border-gray-200" />
+                      )}
+                    </div>
+                  )
+                })}
+              </>
+            )}
           </div>
         )}
 
