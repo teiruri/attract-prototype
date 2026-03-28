@@ -45,8 +45,9 @@ export default function RevpReportPage() {
       try {
         const res = await fetch(`/api/company-profile?tenant_id=${TENANT_ID}`)
         const json = await res.json()
-        if (json.profile?.revp_data) {
-          setData(json.profile.revp_data)
+        const revp = json.profile?.metadata?.revp_data || json.profile?.revp_data
+        if (revp) {
+          setData(revp)
         }
       } catch {}
       finally { setLoading(false) }

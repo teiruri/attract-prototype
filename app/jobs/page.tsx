@@ -6,6 +6,13 @@ import { Plus, Briefcase, Users, Sparkles, MapPin, Building2, Calendar, ChevronR
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
+interface JobAppeal {
+  appeal_points?: string
+  work_environment?: string
+  growth_path?: string
+  team_culture?: string
+}
+
 interface Job {
   id: string
   title: string
@@ -16,7 +23,10 @@ interface Job {
   preferred?: string[]
   hiring_type: string
   is_active: boolean
-  target_persona?: object
+  target_persona?: {
+    job_appeal?: JobAppeal
+    [key: string]: unknown
+  }
   created_at: string
 }
 
@@ -181,6 +191,44 @@ export default function JobsPage() {
                             ))}
                           </ul>
                         </div>
+                      )}
+                      {job.target_persona?.job_appeal && (
+                        (() => {
+                          const appeal = job.target_persona.job_appeal
+                          const hasAppeal = appeal.appeal_points || appeal.work_environment || appeal.growth_path || appeal.team_culture
+                          if (!hasAppeal) return null
+                          return (
+                            <div className="mb-4">
+                              <p className="label mb-2">求人の魅力</p>
+                              <div className="grid grid-cols-2 gap-3">
+                                {appeal.appeal_points && (
+                                  <div className="bg-indigo-50 rounded-lg p-2.5">
+                                    <p className="text-[10px] font-medium text-indigo-600 mb-0.5">魅力ポイント</p>
+                                    <p className="text-xs text-gray-700 leading-relaxed">{appeal.appeal_points}</p>
+                                  </div>
+                                )}
+                                {appeal.work_environment && (
+                                  <div className="bg-emerald-50 rounded-lg p-2.5">
+                                    <p className="text-[10px] font-medium text-emerald-600 mb-0.5">働き方・環境</p>
+                                    <p className="text-xs text-gray-700 leading-relaxed">{appeal.work_environment}</p>
+                                  </div>
+                                )}
+                                {appeal.growth_path && (
+                                  <div className="bg-amber-50 rounded-lg p-2.5">
+                                    <p className="text-[10px] font-medium text-amber-600 mb-0.5">成長・キャリアパス</p>
+                                    <p className="text-xs text-gray-700 leading-relaxed">{appeal.growth_path}</p>
+                                  </div>
+                                )}
+                                {appeal.team_culture && (
+                                  <div className="bg-purple-50 rounded-lg p-2.5">
+                                    <p className="text-[10px] font-medium text-purple-600 mb-0.5">チーム・カルチャー</p>
+                                    <p className="text-xs text-gray-700 leading-relaxed">{appeal.team_culture}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })()
                       )}
                       <div className="flex gap-2">
                         <Link href={`/jobs/${job.id}`} className="btn-secondary text-xs">

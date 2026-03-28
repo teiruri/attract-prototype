@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -23,6 +23,7 @@ import {
   X,
   AlertCircle,
   Plus,
+  Briefcase,
 } from 'lucide-react'
 
 type DocPhase = 'idle' | 'parsing' | 'preview' | 'saving' | 'done'
@@ -63,8 +64,38 @@ interface CsvPreview {
   imported_count?: number
 }
 
+interface JobOption {
+  id: string
+  title: string
+  department?: string
+  hiring_type: string
+}
+
+const TENANT_ID = '00000000-0000-0000-0000-000000000001'
+
 export default function NewCandidatePage() {
   const router = useRouter()
+
+  // Job selection state
+  const [jobs, setJobs] = useState<JobOption[]>([])
+  const [selectedJobId, setSelectedJobId] = useState<string>('')
+  const [jobsLoading, setJobsLoading] = useState(true)
+
+  // Fetch jobs on mount
+  useEffect(() => {
+    async function fetchJobs() {
+      try {
+        const res = await fetch(`/api/jobs?tenant_id=${TENANT_ID}`)
+        const data = await res.json()
+        setJobs((data.jobs || []).filter((j: JobOption & { is_active?: boolean }) => j.is_active !== false))
+      } catch {
+        // silently fail
+      } finally {
+        setJobsLoading(false)
+      }
+    }
+    fetchJobs()
+  }, [])
 
   // Document import state
   const [docPhase, setDocPhase] = useState<DocPhase>('idle')
@@ -154,6 +185,7 @@ export default function NewCandidatePage() {
         const formData = new FormData()
         formData.append('file', selectedFiles[i])
         formData.append('save', 'false') // 抽出のみ、DB保存しない
+        if (selectedJobId) formData.append('job_id', selectedJobId)
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 120000)
@@ -222,7 +254,7 @@ export default function NewCandidatePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenant_id: '00000000-0000-0000-0000-000000000001',
+          tenant_id: TENANT_ID,
           full_name: merged.full_name || '氏名不明',
           email: merged.email || null,
           phone: merged.phone || null,
@@ -231,6 +263,7 @@ export default function NewCandidatePage() {
           university: merged.university || null,
           faculty: merged.faculty || null,
           work_experience: merged.work_experience || [],
+          job_id: selectedJobId || undefined,
         }),
       })
 
@@ -316,6 +349,7 @@ export default function NewCandidatePage() {
       formData.append('file', csvFileRef.current)
       formData.append('platform', csvPlatform)
       formData.append('confirm', 'true')
+      if (selectedJobId) formData.append('job_id', selectedJobId)
 
       const res = await fetch('/api/candidates/import-csv', {
         method: 'POST',
@@ -367,6 +401,55 @@ export default function NewCandidatePage() {
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2 space-y-6">
 
+            {/* ===== Job Selection (Required) ===== */}
+            <div className="card p-6">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">応募求人を選択</h2>
+                  <p className="text-xs text-gray-400">候補者を紐づける求人を選択してください（必須）</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                {jobsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    求人を読み込み中...
+                  </div>
+                ) : jobs.length === 0 ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-xs text-amber-700">
+                      募集中の求人がありません。先に<a href="/jobs/new" className="underline font-medium">求人を登録</a>してください。
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={selectedJobId}
+                      onChange={(e) => setSelectedJobId(e.target.value)}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white pr-8"
+                    >
+                      <option value="">-- 求人を選択してください --</option>
+                      {jobs.map((job) => (
+                        <option key={job.id} value={job.id}>
+                          {job.title}{job.department ? ` (${job.department})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                )}
+                {!selectedJobId && !jobsLoading && jobs.length > 0 && (
+                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    求人を選択するまで書類のアップロード・CSV取り込みはできません
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* ===== Card 1: 書類から取り込み（2ステップフロー） ===== */}
             <div className="card p-6">
               <div className="flex items-center gap-3 mb-1">
@@ -410,12 +493,16 @@ export default function NewCandidatePage() {
 
                     {/* Drop zone / file selector */}
                     <div
-                      onClick={() => docInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-all"
+                      onClick={() => selectedJobId ? docInputRef.current?.click() : undefined}
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                        selectedJobId
+                          ? 'border-gray-300 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50'
+                          : 'border-gray-200 cursor-not-allowed opacity-50'
+                      }`}
                     >
                       <Upload className="w-7 h-7 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm font-medium text-gray-600 mb-1">
-                        同一候補者の書類をまとめてアップロード
+                        {selectedJobId ? '同一候補者の書類をまとめてアップロード' : '先に応募求人を選択してください'}
                       </p>
                       <p className="text-xs text-gray-400">クリックしてファイルを選択（複数選択可）</p>
                       <div className="flex items-center justify-center gap-3 mt-3">
@@ -465,7 +552,9 @@ export default function NewCandidatePage() {
                           </button>
                           <button
                             onClick={handleStartParsing}
+                            disabled={!selectedJobId}
                             className="btn-primary text-sm"
+                            title={!selectedJobId ? '先に応募求人を選択してください' : undefined}
                           >
                             <Brain className="w-4 h-4" />
                             AI解析を開始
@@ -696,14 +785,20 @@ export default function NewCandidatePage() {
                     </div>
 
                     <div
-                      onClick={() => csvInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/50 transition-all"
+                      onClick={() => selectedJobId ? csvInputRef.current?.click() : undefined}
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                        selectedJobId
+                          ? 'border-gray-300 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/50'
+                          : 'border-gray-200 cursor-not-allowed opacity-50'
+                      }`}
                     >
                       <FileSpreadsheet className="w-7 h-7 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm font-medium text-gray-600 mb-1">
                         クリックしてCSVファイルを選択
                       </p>
-                      <p className="text-xs text-gray-400">CSV形式（最大50MB）</p>
+                      <p className="text-xs text-gray-400">
+                        {selectedJobId ? 'CSV形式（最大50MB）' : '先に応募求人を選択してください'}
+                      </p>
                     </div>
                   </>
                 )}

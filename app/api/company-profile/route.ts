@@ -17,6 +17,11 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Expose revp_data from metadata for convenience
+    if (data && data.metadata?.revp_data) {
+      data.revp_data = data.metadata.revp_data
+    }
+
     return NextResponse.json({ profile: data || null })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
@@ -31,7 +36,7 @@ export async function PUT(req: NextRequest) {
 
     const { data: existing } = await db
       .from('company_profiles')
-      .select('id')
+      .select('id, metadata')
       .limit(1)
       .single()
 
@@ -40,7 +45,12 @@ export async function PUT(req: NextRequest) {
     }
 
     const updateFields: Record<string, unknown> = {}
-    if (body.revp_data !== undefined) updateFields.revp_data = body.revp_data
+
+    // Store revp_data inside the metadata JSONB field
+    if (body.revp_data !== undefined) {
+      const existingMetadata = (existing.metadata as Record<string, unknown>) || {}
+      updateFields.metadata = { ...existingMetadata, revp_data: body.revp_data }
+    }
 
     const { data, error } = await db
       .from('company_profiles')
@@ -50,6 +60,12 @@ export async function PUT(req: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Expose revp_data from metadata for convenience
+    if (data && data.metadata?.revp_data) {
+      data.revp_data = data.metadata.revp_data
+    }
+
     return NextResponse.json({ profile: data })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

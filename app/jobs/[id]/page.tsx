@@ -7,12 +7,20 @@ import { ArrowLeft, Save, Trash2 } from 'lucide-react'
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
+interface JobAppeal {
+  appeal_points?: string
+  work_environment?: string
+  growth_path?: string
+  team_culture?: string
+}
+
 interface TargetPersona {
   age_range?: string
   experience_years?: string
   skills?: string[]
   personality_traits?: string[]
   motivation?: string
+  job_appeal?: JobAppeal
 }
 
 interface Job {
@@ -53,6 +61,12 @@ export default function JobEditPage() {
   const [personalityTraits, setPersonalityTraits] = useState('')
   const [motivation, setMotivation] = useState('')
 
+  // Job appeal
+  const [appealPoints, setAppealPoints] = useState('')
+  const [workEnvironment, setWorkEnvironment] = useState('')
+  const [growthPath, setGrowthPath] = useState('')
+  const [teamCulture, setTeamCulture] = useState('')
+
   useEffect(() => {
     async function fetchJob() {
       try {
@@ -76,6 +90,12 @@ export default function JobEditPage() {
         setSkills((persona.skills || []).join(', '))
         setPersonalityTraits((persona.personality_traits || []).join(', '))
         setMotivation(persona.motivation || '')
+
+        const appeal = persona.job_appeal || {}
+        setAppealPoints(appeal.appeal_points || '')
+        setWorkEnvironment(appeal.work_environment || '')
+        setGrowthPath(appeal.growth_path || '')
+        setTeamCulture(appeal.team_culture || '')
       } catch {
         // silently fail
       } finally {
@@ -104,6 +124,12 @@ export default function JobEditPage() {
           skills: skills.split(',').map(s => s.trim()).filter(Boolean),
           personality_traits: personalityTraits.split(',').map(s => s.trim()).filter(Boolean),
           motivation,
+          job_appeal: {
+            appeal_points: appealPoints,
+            work_environment: workEnvironment,
+            growth_path: growthPath,
+            team_culture: teamCulture,
+          },
         },
       }
 
@@ -311,6 +337,54 @@ export default function JobEditPage() {
                 onChange={e => setMotivation(e.target.value)}
                 rows={3}
                 placeholder="例：成長環境を求める、社会貢献に関心がある"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Job Appeal */}
+        <div className="card p-6">
+          <h2 className="text-sm font-semibold text-gray-900 mb-1">求人の魅力</h2>
+          <p className="text-xs text-gray-400 mb-4">候補者への惹きつけに活用されます。AIが生成するメッセージの精度が向上します。</p>
+          <div className="space-y-4">
+            <div>
+              <label className="label mb-1">この求人の魅力ポイント</label>
+              <textarea
+                value={appealPoints}
+                onChange={e => setAppealPoints(e.target.value)}
+                rows={3}
+                placeholder="例：業界トップクラスのプロダクト開発に携われる、裁量が大きい"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="label mb-1">働き方・環境の特徴</label>
+              <textarea
+                value={workEnvironment}
+                onChange={e => setWorkEnvironment(e.target.value)}
+                rows={3}
+                placeholder="例：フルリモート可、フレックスタイム制、最新のMacBook支給"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="label mb-1">成長・キャリアパス</label>
+              <textarea
+                value={growthPath}
+                onChange={e => setGrowthPath(e.target.value)}
+                rows={3}
+                placeholder="例：入社2年でリードエンジニアへの昇格実績あり、社内勉強会が活発"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="label mb-1">チーム・カルチャー</label>
+              <textarea
+                value={teamCulture}
+                onChange={e => setTeamCulture(e.target.value)}
+                rows={3}
+                placeholder="例：心理的安全性を重視、1on1ミーティング週1回、チーム全員がコードレビュー"
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>

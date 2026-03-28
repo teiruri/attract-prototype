@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const { candidate, job, revp } = await req.json()
+    const { candidate, job, revp, interviews } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
@@ -51,7 +51,16 @@ ${jobInfo}
 企業REVP情報:
 自社の強み: ${(revp?.strengths || []).join('、') || '未設定'}
 候補者への重要メッセージ: ${(revp?.messages || []).join('、') || '未設定'}
-魅力エピソード: ${(revp?.episodes || []).join('、') || '未設定'}`
+魅力エピソード: ${(revp?.episodes || []).join('、') || '未設定'}
+
+面接評価情報:
+${(interviews || []).map((iv: any) => `
+${iv.stage}: 結果=${iv.result || '未評価'}, 志望度=${iv.temperature_score || '未入力'}/10
+面接官: ${iv.interviewer_name || '未設定'}
+合格理由: ${iv.interviewer_evaluation?.pass_reason || '未入力'}
+申し送り: ${iv.interviewer_evaluation?.handoff_to_interviewer || '未入力'}
+面接メモ: ${iv.interview_text || '未入力'}
+`).join('\n')}`
       }]
     })
 

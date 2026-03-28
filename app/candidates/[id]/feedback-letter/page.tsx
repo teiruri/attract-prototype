@@ -11,6 +11,7 @@ export default function FeedbackLetterPage() {
   const [candidate, setCandidate] = useState<any>(null)
   const [job, setJob] = useState<any>(null)
   const [revp, setRevp] = useState<any>(null)
+  const [interviews, setInterviews] = useState<any[]>([])
   const [result, setResult] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -33,6 +34,10 @@ export default function FeedbackLetterPage() {
         const profileData = await profileRes.json()
         const revpData = profileData.profile?.revp_data || null
         setRevp(revpData)
+
+        const interviewRes = await fetch(`/api/candidates/${id}/interviews`)
+        const interviewData = await interviewRes.json()
+        setInterviews(interviewData.interviews || [])
       } catch {
         // ignore
       } finally {
@@ -50,7 +55,7 @@ export default function FeedbackLetterPage() {
       const res = await fetch(`/api/candidates/${id}/feedback-letter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate, job, revp }),
+        body: JSON.stringify({ candidate, job, revp, interviews }),
       })
       const data = await res.json()
       if (data.error) {
