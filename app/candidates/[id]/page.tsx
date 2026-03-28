@@ -736,7 +736,7 @@ export default function CandidateDetailPage() {
       </div>
       <div>
         <label className="text-xs font-medium text-gray-500 mb-1 block">合格理由 / 不合格理由</label>
-        <p className="text-[10px] text-gray-400 mb-1">この内容が合格通知レターに反映されます</p>
+        <p className="text-[10px] text-gray-400 mb-1">この内容が合格・通過レターに反映されます</p>
         <textarea value={form.pass_reason} onChange={(e) => onUpdate('pass_reason', e.target.value)}
           placeholder="評価の根拠や理由を記述..." rows={3}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
@@ -1198,10 +1198,10 @@ export default function CandidateDetailPage() {
           <SectionHeader icon={<Sparkles className="w-5 h-5 text-indigo-500" />}>AI クイックアクション</SectionHeader>
           <div className="grid grid-cols-2 gap-4">
             {[
-              { href: `/candidates/${id}/attract`, icon: <Sparkles className="w-5 h-5" />, label: '惹きつけ戦略', desc: '候補者に最適化された惹きつけストーリーを生成', color: 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100' },
-              { href: `/candidates/${id}/personal-offer`, icon: <Award className="w-5 h-5" />, label: 'パーソナルオファー', desc: '候補者の価値観に響くオファーレターを作成', color: 'bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100' },
-              { href: `/candidates/${id}/feedback-letter`, icon: <Mail className="w-5 h-5" />, label: '合格通知レター', desc: '評価理由を反映したフィードバックレター', color: 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100' },
-              { href: `/candidates/${id}/brief`, icon: <FileText className="w-5 h-5" />, label: '面接準備資料', desc: '次回面接官のためのブリーフィング資料', color: 'bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100' },
+              { href: `/candidates/${id}/attract`, icon: <Sparkles className="w-5 h-5" />, label: '惹きつけメモ', desc: '候補者に最適化された惹きつけストーリーを生成', color: 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100' },
+              { href: `/candidates/${id}/personal-offer`, icon: <Award className="w-5 h-5" />, label: 'ファーストコンタクト', desc: '候補者の価値観に響くオファーレターを作成', color: 'bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100' },
+              { href: `/candidates/${id}/feedback-letter`, icon: <Mail className="w-5 h-5" />, label: '合格・通過レター', desc: '評価理由を反映した合格・通過レター', color: 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100' },
+              { href: `/candidates/${id}/brief`, icon: <FileText className="w-5 h-5" />, label: '面接準備シート', desc: '次回面接官のためのブリーフィング資料', color: 'bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100' },
             ].map((item) => (
               <Link key={item.href} href={item.href}
                 className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${item.color}`}>

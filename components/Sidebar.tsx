@@ -23,7 +23,7 @@ const navGroups = [
     items: [
       { label: 'コマンドセンター', href: '/', icon: Command, badge: 'urgent' as const },
       { label: '候補者ジャーニー', href: '/candidates', icon: Users, badge: 'count' as const },
-      { label: '選考ダッシュボード', href: '/selection', icon: BarChart3 },
+      { label: '選考プロセス', href: '/selection', icon: BarChart3 },
     ],
   },
   {
@@ -37,7 +37,7 @@ const navGroups = [
   {
     label: 'インサイト',
     items: [
-      { label: '採用サマリー', href: '/recruitment-summary', icon: FileText },
+      { label: '採用レポート', href: '/recruitment-summary', icon: FileText },
       { label: 'タレントプール', href: '/talent-pool/candidates', icon: Database },
     ],
   },

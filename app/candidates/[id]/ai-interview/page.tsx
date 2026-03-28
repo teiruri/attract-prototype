@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import { getCandidateById } from '@/lib/mock-data'
 
-// デモ用AI面接評価データ
+// デモ用AI面談評価データ
 const DEMO_AI_INTERVIEW = {
   importedAt: '2026-03-20 14:32',
   overallScore: 78,
@@ -151,7 +151,7 @@ export default function AIInterviewPage() {
             {candidate.fullName}
           </Link>
           <ChevronRight className="w-3 h-3 text-gray-300" />
-          <span className="text-sm text-gray-700 font-medium">AI面接</span>
+          <span className="text-sm text-gray-700 font-medium">AI面談</span>
         </div>
 
         {/* Header */}
@@ -163,7 +163,7 @@ export default function AIInterviewPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  AI面接（AIレコメン連携）
+                  AI面談（AIレコメン連携）
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-100 text-violet-700 border border-violet-200">
                     <Zap className="w-3 h-3" />
                     アイエンター
@@ -191,11 +191,11 @@ export default function AIInterviewPage() {
       </div>
 
       <div className="px-8 py-6 space-y-6 max-w-6xl">
-        {/* Section 1: AI面接結果の取り込み */}
+        {/* Section 1: AI面談結果の取り込み */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
             <Upload className="w-4 h-4 text-violet-500" />
-            AI面接結果の取り込み
+            AI面談結果の取り込み
           </h2>
           <div className="flex items-center gap-3">
             <button
@@ -220,13 +220,13 @@ export default function AIInterviewPage() {
           )}
         </div>
 
-        {/* Section 2: AI面接サマリー (imported時のみ表示) */}
+        {/* Section 2: AI面談サマリー (imported時のみ表示) */}
         {importStatus === 'imported' && (
           <>
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-violet-500" />
-                AI面接サマリー
+                AI面談サマリー
               </h2>
 
               {/* Overall Score + Skills Grid */}
@@ -361,9 +361,9 @@ export default function AIInterviewPage() {
               <div className="space-y-2.5">
                 {[
                   { label: '候補者カルテに反映済み', icon: FileText },
-                  { label: '惹きつけ戦略の算出に使用', icon: Sparkles },
-                  { label: '合格通知レター生成に反映', icon: Target },
-                  { label: '面接準備資料に反映', icon: MessageSquare },
+                  { label: '惹きつけメモの算出に使用', icon: Sparkles },
+                  { label: '合格・通過レター生成に反映', icon: Target },
+                  { label: '面接準備シートに反映', icon: MessageSquare },
                   { label: '内定予測・承諾予測の算出に使用', icon: TrendingUp },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2.5">

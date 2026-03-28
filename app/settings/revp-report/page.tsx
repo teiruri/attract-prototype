@@ -838,7 +838,7 @@ export default function RevpReportPage() {
           <div>
             <p className="text-sm font-bold text-indigo-800">AIへの自動反映</p>
             <p className="text-xs text-indigo-600 leading-relaxed mt-1">
-              ここで設定したREVP情報は、パーソナルオファー・惹きつけ戦略・合格通知レター・次回面接シナリオの各AI生成機能に自動で反映されます。
+              ここで設定したREVP情報は、ファーストコンタクト・惹きつけメモ・合格・通過レター・面接準備シートの各AI生成機能に自動で反映されます。
               情報が充実するほど、候補者に刺さるメッセージが生成されます。
             </p>
           </div>

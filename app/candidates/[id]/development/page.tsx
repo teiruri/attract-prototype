@@ -126,7 +126,7 @@ const ACTION_PLAN = [
   {
     label: '次回面接',
     date: '2026-03-28',
-    description: '戦略思考の深掘り質問を3問追加（面接準備資料に反映済み）',
+    description: '戦略思考の深掘り質問を3問追加（面接準備シートに反映済み）',
     status: 'scheduled' as const,
   },
   {
@@ -534,14 +534,14 @@ export default function DevelopmentFeedbackPage() {
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <FileText className="w-4 h-4" />
-                面接準備資料に反映
+                面接準備シートに反映
               </Link>
               <Link
                 href={`/candidates/${id}/feedback-letter`}
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <MessageSquare className="w-4 h-4" />
-                フィードバックレターに反映
+                合格・通過レターに反映
               </Link>
               <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                 <FileText className="w-4 h-4" />

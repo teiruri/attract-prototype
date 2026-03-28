@@ -107,7 +107,7 @@ export default function FeedbackLetterPage() {
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-500" />
-              <h1 className="text-xl font-bold text-gray-900">合格通知レター</h1>
+              <h1 className="text-xl font-bold text-gray-900">合格・通過レター</h1>
             </div>
             {candidate && (
               <p className="text-sm text-gray-500 mt-1">
@@ -136,7 +136,7 @@ export default function FeedbackLetterPage() {
           <div className="text-center py-8">
             <button onClick={handleGenerate} disabled={!candidate} className="btn-primary text-base px-8 py-3 flex items-center gap-3 mx-auto">
               <Sparkles className="w-5 h-5" />
-              合格通知レターを作成
+              合格・通過レターを作成
             </button>
             {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
           </div>

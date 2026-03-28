@@ -374,7 +374,7 @@ export default function EvpSurveyPage() {
             <div className="space-y-2">
               {[
                 { title: '証拠に裏付けられたEVP', desc: '実際の社員・退職者・候補者の声から生成されたEVPが採用訴求に使える' },
-                { title: 'AI出力の精度が上がる', desc: 'フィードバックレターとひきつけプランの生成品質が大幅に向上' },
+                { title: 'AI出力の精度が上がる', desc: '合格・通過レターと惹きつけメモの生成品質が大幅に向上' },
                 { title: '訴求軸の優先順位が明確に', desc: 'スコアの高い項目から優先的に訴求することで承諾率が上がる' },
               ].map((b, i) => (
                 <div key={i} className="p-3 bg-white rounded-lg border border-indigo-100">

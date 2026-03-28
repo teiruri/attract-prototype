@@ -70,7 +70,7 @@ export default function JobsPage() {
   if (loading) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">求人管理</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">求人設計</h1>
         <div className="flex items-center justify-center h-64">
           <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -82,7 +82,7 @@ export default function JobsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">求人管理</h1>
+          <h1 className="text-2xl font-bold text-gray-900">求人設計</h1>
           <p className="text-sm text-gray-500 mt-1">
             募集ポジションの登録・管理 — {jobs.filter(j => j.is_active).length}件 募集中 / {jobs.length}件 合計
           </p>
@@ -275,7 +275,7 @@ export default function JobsPage() {
                 <div>
                   <p className="text-xs font-semibold text-indigo-800 mb-1">HR FARM の効果を最大化</p>
                   <p className="text-xs text-indigo-600 leading-relaxed">
-                    各求人に「企業魅力プロファイル」を設定することで、AIが生成するフィードバックレターやひきつけプランの精度が大幅に向上します。
+                    各求人に「企業の魅力」を設定することで、AIが生成する合格・通過レターや惹きつけメモの精度が大幅に向上します。
                   </p>
                   <Link href="/settings/attraction-profile" className="text-xs text-indigo-700 font-medium mt-2 inline-flex items-center gap-1 hover:text-indigo-800">
                     企業魅力設定を確認する

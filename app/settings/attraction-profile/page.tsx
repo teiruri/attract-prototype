@@ -109,7 +109,7 @@ export default function AttractionProfilePage() {
   if (loading) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">企業魅力・採用コンセプト設定</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">企業の魅力</h1>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
@@ -126,7 +126,7 @@ export default function AttractionProfilePage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-5 h-5 text-indigo-500" />
-            <h1 className="text-2xl font-bold text-gray-900">企業魅力・採用コンセプト設定</h1>
+            <h1 className="text-2xl font-bold text-gray-900">企業の魅力</h1>
           </div>
           <p className="text-sm text-gray-500">
             AIのAttract生成の土台となります。ここの設定品質がすべてのAI出力品質を決定します。

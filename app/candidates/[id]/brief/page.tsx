@@ -358,8 +358,8 @@ export default function BriefPage() {
                 <FileText className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">面接準備資料</h1>
-                <p className="text-xs text-gray-500 mt-0.5">AIが候補者データをもとに面接シナリオを自動生成します</p>
+                <h1 className="text-xl font-bold text-gray-900">面接準備シート</h1>
+                <p className="text-xs text-gray-500 mt-0.5">AIが候補者データをもとに面接準備シートを自動生成します</p>
               </div>
             </div>
           </div>
@@ -421,7 +421,7 @@ export default function BriefPage() {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-200">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">面接準備資料を生成</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">面接準備シートを生成</h2>
             <p className="text-sm text-gray-500 mb-8 max-w-md mx-auto">
               候補者情報・過去の面接記録・企業魅力情報をもとに、次回面接のシナリオと質問案をAIが作成します。
             </p>
@@ -431,7 +431,7 @@ export default function BriefPage() {
               className="btn-primary text-base px-8 py-3 flex items-center gap-3 mx-auto shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-200 transition-shadow"
             >
               <Sparkles className="w-5 h-5" />
-              面接シナリオを作成
+              面接準備シートを作成
             </button>
             {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
           </div>
@@ -485,7 +485,7 @@ export default function BriefPage() {
             {!generating && result && (
               <div className="mt-6 px-5 py-3 rounded-lg bg-gray-100 flex items-center justify-between">
                 <p className="text-xs text-gray-400">
-                  この面接準備資料はAIが候補者情報・面接記録・企業魅力情報をもとに自動生成しました。
+                  この面接準備シートはAIが候補者情報・面接記録・企業魅力情報をもとに自動生成しました。
                 </p>
               </div>
             )}

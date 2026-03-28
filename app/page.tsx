@@ -205,15 +205,15 @@ function getRecommendedAction(ec: {
   candidateId: string
 }): { label: string; href: string } | null {
   if (ec.currentStageKey === 'offer' || ec.shiboudo < 40) {
-    return { label: 'パーソナルオファーを送る', href: `/candidates/${ec.candidateId}/personal-offer` }
+    return { label: 'ファーストコンタクトを送る', href: `/candidates/${ec.candidateId}/personal-offer` }
   }
   if (ec.lastContactDays > 5) {
     return { label: '惹きつけストーリーを確認', href: `/candidates/${ec.candidateId}/attract` }
   }
   if (ec.shiboudo < 60) {
-    return { label: 'フィードバックレターを作成', href: `/candidates/${ec.candidateId}/feedback-letter` }
+    return { label: '合格・通過レターを作成', href: `/candidates/${ec.candidateId}/feedback-letter` }
   }
-  return { label: '面接準備資料を確認', href: `/candidates/${ec.candidateId}/brief` }
+  return { label: '面接準備シートを確認', href: `/candidates/${ec.candidateId}/brief` }
 }
 
 function getAiSuggestion(ec: {
@@ -497,7 +497,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Journey Decision Center</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">コマンドセンター</h1>
         <p className="text-sm text-gray-500">{dateStr}</p>
         <div className="flex items-center justify-center h-64">
           <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
@@ -515,7 +515,7 @@ export default function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-                Journey Decision Center
+                コマンドセンター
               </h1>
               <p className="text-sm text-gray-500 mt-1">{dateStr}</p>
             </div>

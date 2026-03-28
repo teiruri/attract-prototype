@@ -230,7 +230,7 @@ export default function SelectionManagementPage() {
       <div className="bg-white border-b border-gray-200 px-8 py-6">
         <div className="flex items-center gap-3 mb-1">
           <ClipboardCheck className="w-6 h-6 text-indigo-600" />
-          <h1 className="text-xl font-bold text-gray-900">選考管理</h1>
+          <h1 className="text-xl font-bold text-gray-900">選考プロセス</h1>
         </div>
         <p className="text-sm text-gray-500 ml-9">面接官・人事のための選考進捗管理</p>
       </div>
@@ -369,14 +369,14 @@ export default function SelectionManagementPage() {
                           <Link
                             href={`/candidates/${candidate.id}/feedback-letter`}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                            title="合格通知"
+                            title="合格・通過レター"
                           >
                             <Mail className="w-3.5 h-3.5" />
                           </Link>
                           <Link
                             href={`/candidates/${candidate.id}/brief`}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                            title="面接シナリオ"
+                            title="面接準備シート"
                           >
                             <FileText className="w-3.5 h-3.5" />
                           </Link>
