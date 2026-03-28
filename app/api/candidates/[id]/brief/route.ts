@@ -19,12 +19,10 @@ export async function POST(
 
     const candidateInfo = `
 候補者名: ${candidate.full_name || '不明'}
-メール: ${candidate.email || '不明'}
 採用タイプ: ${candidate.hiring_type === 'new_graduate' ? '新卒' : '中途'}
 現職: ${candidate.current_company || ''} ${candidate.current_title || ''}
 大学: ${candidate.university || ''} ${candidate.faculty || ''}
 職歴: ${JSON.stringify(candidate.work_experience || [])}
-ステータス: ${candidate.status || ''}
 `.trim()
 
     const jobInfo = `
@@ -38,9 +36,9 @@ export async function POST(
 ターゲットペルソナ: ${JSON.stringify(job?.target_persona || {})}
 `.trim()
 
-    const message = await anthropic.messages.create({
+    const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      max_tokens: 3072,
       messages: [{
         role: 'user',
         content: `あなたは採用マネージャーです。以下の候補者の次回面接に向けた面接シナリオを作成してください。
@@ -85,12 +83,29 @@ ${iv.stage}: 結果=${iv.result || '未評価'}, 志望度=${iv.temperature_scor
       }]
     })
 
-    const resultText = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map(b => b.text)
-      .join('')
+    const encoder = new TextEncoder()
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text))
+            }
+          }
+          controller.close()
+        } catch (err) {
+          controller.error(err)
+        }
+      }
+    })
 
-    return NextResponse.json({ result: resultText })
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+        'Cache-Control': 'no-cache',
+      },
+    })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
