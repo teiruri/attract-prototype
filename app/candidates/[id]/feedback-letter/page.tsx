@@ -3,7 +3,26 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Sparkles, Loader2, Copy, CheckCircle2, Mail } from 'lucide-react'
+import { ArrowLeft, Sparkles, Loader2, Copy, CheckCircle2, Mail, ChevronDown } from 'lucide-react'
+
+type LetterType = 'stage_pass' | 'final_offer'
+
+interface StageOption {
+  value: string
+  label: string
+  letterType: LetterType
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  interview_1: '一次面接',
+  interview_2: '二次面接',
+  interview_3: '三次面接',
+  interview_final: '最終面接',
+}
+
+function getStageName(stage: string): string {
+  return STAGE_LABELS[stage] || stage
+}
 
 export default function FeedbackLetterPage() {
   const params = useParams()
@@ -18,6 +37,10 @@ export default function FeedbackLetterPage() {
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string>('')
   const resultRef = useRef<HTMLDivElement>(null)
+
+  const [selectedStage, setSelectedStage] = useState<string>('')
+  const [letterType, setLetterType] = useState<LetterType>('stage_pass')
+  const [stageOptions, setStageOptions] = useState<StageOption[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,22 +58,85 @@ export default function FeedbackLetterPage() {
         const profileData = await profileRes.json()
         setRevp(profileData.profile?.revp_data || null)
         const interviewData = await interviewRes.json()
-        setInterviews(interviewData.interviews || [])
+        const interviewList = interviewData.interviews || []
+        setInterviews(interviewList)
+
+        // Build stage options from completed interviews (those with a result)
+        const completedInterviews = interviewList.filter((iv: any) => iv.result && iv.result !== '未評価')
+        const options: StageOption[] = []
+
+        for (const iv of completedInterviews) {
+          const stageName = getStageName(iv.stage)
+          if (iv.stage === 'interview_final') {
+            options.push({
+              value: iv.stage,
+              label: `${stageName}の通過（内定）`,
+              letterType: 'final_offer',
+            })
+          } else {
+            options.push({
+              value: iv.stage,
+              label: `${stageName}の通過`,
+              letterType: 'stage_pass',
+            })
+          }
+        }
+
+        // Always add standalone 内定通知 option
+        options.push({
+          value: '__final_offer__',
+          label: '内定通知',
+          letterType: 'final_offer',
+        })
+
+        setStageOptions(options)
+
+        // Auto-select: find latest interview with result S or A
+        const passedInterviews = completedInterviews.filter(
+          (iv: any) => iv.result === 'S' || iv.result === 'A'
+        )
+        if (passedInterviews.length > 0) {
+          const latest = passedInterviews[passedInterviews.length - 1]
+          const matchingOption = options.find((o) => o.value === latest.stage)
+          if (matchingOption) {
+            setSelectedStage(matchingOption.value)
+            setLetterType(matchingOption.letterType)
+          }
+        } else if (options.length > 0) {
+          setSelectedStage(options[0].value)
+          setLetterType(options[0].letterType)
+        }
       } catch { /* ignore */ } finally { setLoading(false) }
     }
     fetchData()
   }, [id])
 
+  const handleStageChange = (value: string) => {
+    setSelectedStage(value)
+    const option = stageOptions.find((o) => o.value === value)
+    if (option) {
+      setLetterType(option.letterType)
+    }
+  }
+
   const handleGenerate = async () => {
-    if (!candidate) return
+    if (!candidate || !selectedStage) return
     setGenerating(true)
     setError('')
     setResult('')
     try {
+      const targetStage = selectedStage === '__final_offer__' ? undefined : selectedStage
       const res = await fetch(`/api/candidates/${id}/feedback-letter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate, job, revp, interviews }),
+        body: JSON.stringify({
+          candidate,
+          job,
+          revp,
+          interviews,
+          letter_type: letterType,
+          target_stage: targetStage,
+        }),
       })
 
       if (!res.ok) {
@@ -88,6 +174,8 @@ export default function FeedbackLetterPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const generateButtonLabel = letterType === 'final_offer' ? '内定レターを作成' : '通過レターを作成'
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -107,7 +195,7 @@ export default function FeedbackLetterPage() {
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-500" />
-              <h1 className="text-xl font-bold text-gray-900">合格・通過レター</h1>
+              <h1 className="text-xl font-bold text-gray-900">通過・内定レター</h1>
             </div>
             {candidate && (
               <p className="text-sm text-gray-500 mt-1">
@@ -132,11 +220,49 @@ export default function FeedbackLetterPage() {
           </div>
         )}
 
+        {/* Stage Selector */}
+        <div className="card p-5 mb-6">
+          <h2 className="section-title mb-3">どの選考の通過を伝えますか？</h2>
+          {stageOptions.length === 0 ? (
+            <p className="text-sm text-gray-500">完了した面接がありません。面接結果を入力してから通過レターを作成してください。</p>
+          ) : (
+            <div className="space-y-2">
+              {stageOptions.map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedStage === option.value
+                      ? 'border-indigo-300 bg-indigo-50'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="stage"
+                    value={option.value}
+                    checked={selectedStage === option.value}
+                    onChange={() => handleStageChange(option.value)}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className={`text-sm font-medium ${
+                    selectedStage === option.value ? 'text-indigo-700' : 'text-gray-700'
+                  }`}>
+                    {option.label}
+                  </span>
+                  {option.letterType === 'final_offer' && (
+                    <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">内定</span>
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
         {!result && !generating && (
           <div className="text-center py-8">
-            <button onClick={handleGenerate} disabled={!candidate} className="btn-primary text-base px-8 py-3 flex items-center gap-3 mx-auto">
+            <button onClick={handleGenerate} disabled={!candidate || !selectedStage} className="btn-primary text-base px-8 py-3 flex items-center gap-3 mx-auto disabled:opacity-50 disabled:cursor-not-allowed">
               <Sparkles className="w-5 h-5" />
-              合格・通過レターを作成
+              {generateButtonLabel}
             </button>
             {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
           </div>

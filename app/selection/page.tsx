@@ -369,7 +369,7 @@ export default function SelectionManagementPage() {
                           <Link
                             href={`/candidates/${candidate.id}/feedback-letter`}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                            title="合格・通過レター"
+                            title="通過・内定レター"
                           >
                             <Mail className="w-3.5 h-3.5" />
                           </Link>

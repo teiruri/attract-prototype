@@ -36,9 +36,18 @@ async function getProfile() {
 }
 
 async function updateEmployees(profileId: string, employees: Employee[]) {
+  // First get existing metadata to not overwrite other data
+  const { data: existing } = await supabase
+    .from('company_profiles')
+    .select('metadata')
+    .eq('id', profileId)
+    .single()
+
+  const currentMetadata = existing?.metadata || {}
+
   const { error } = await supabase
     .from('company_profiles')
-    .update({ metadata: { employees } })
+    .update({ metadata: { ...currentMetadata, employees } })
     .eq('id', profileId)
   if (error) throw error
 }

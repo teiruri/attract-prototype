@@ -211,7 +211,7 @@ function getRecommendedAction(ec: {
     return { label: '惹きつけストーリーを確認', href: `/candidates/${ec.candidateId}/attract` }
   }
   if (ec.shiboudo < 60) {
-    return { label: '合格・通過レターを作成', href: `/candidates/${ec.candidateId}/feedback-letter` }
+    return { label: '通過・内定レターを作成', href: `/candidates/${ec.candidateId}/feedback-letter` }
   }
   return { label: '面接準備シートを確認', href: `/candidates/${ec.candidateId}/brief` }
 }

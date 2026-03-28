@@ -336,8 +336,8 @@ export async function GET(
       actions.push({
         id: 'feedback_letter',
         priority: 'optional',
-        title: 'フィードバックレター作成',
-        description: '候補者へのフィードバックレターを作成し、入社意欲を高めましょう。',
+        title: '通過・内定レター作成',
+        description: '候補者への通過・内定レターを作成し、入社意欲を高めましょう。',
         action_type: 'feedback',
         action_url: `/candidates/${id}/feedback-letter`,
         icon: 'mail',

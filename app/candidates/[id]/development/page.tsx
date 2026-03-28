@@ -541,7 +541,7 @@ export default function DevelopmentFeedbackPage() {
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <MessageSquare className="w-4 h-4" />
-                合格・通過レターに反映
+                通過・内定レターに反映
               </Link>
               <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                 <FileText className="w-4 h-4" />

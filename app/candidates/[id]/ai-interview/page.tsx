@@ -362,7 +362,7 @@ export default function AIInterviewPage() {
                 {[
                   { label: '候補者カルテに反映済み', icon: FileText },
                   { label: '惹きつけメモの算出に使用', icon: Sparkles },
-                  { label: '合格・通過レター生成に反映', icon: Target },
+                  { label: '通過・内定レター生成に反映', icon: Target },
                   { label: '面接準備シートに反映', icon: MessageSquare },
                   { label: '内定予測・承諾予測の算出に使用', icon: TrendingUp },
                 ].map((item) => (

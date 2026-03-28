@@ -736,7 +736,7 @@ export default function CandidateDetailPage() {
       </div>
       <div>
         <label className="text-xs font-medium text-gray-500 mb-1 block">合格理由 / 不合格理由</label>
-        <p className="text-[10px] text-gray-400 mb-1">この内容が合格・通過レターに反映されます</p>
+        <p className="text-[10px] text-gray-400 mb-1">この内容が通過・内定レターに反映されます</p>
         <textarea value={form.pass_reason} onChange={(e) => onUpdate('pass_reason', e.target.value)}
           placeholder="評価の根拠や理由を記述..." rows={3}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
@@ -805,9 +805,24 @@ export default function CandidateDetailPage() {
           {/* Name + badges + journey */}
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-center gap-4 min-w-0">
-              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-indigo-700">{(candidate.full_name || '?')[0]}</span>
-              </div>
+              {candidate.metadata?.has_photo && candidate.metadata?.document_url ? (
+                <div className="relative group flex-shrink-0">
+                  <img
+                    src={candidate.metadata.document_url as string}
+                    alt={candidate.full_name}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-indigo-200"
+                  />
+                  {candidate.metadata?.photo_description ? (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      {String(candidate.metadata.photo_description)}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg font-bold text-indigo-700">{(candidate.full_name || '?')[0]}</span>
+                </div>
+              )}
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
                   <h1 className="text-xl font-bold text-gray-900 truncate">{candidate.full_name}</h1>
@@ -1200,7 +1215,7 @@ export default function CandidateDetailPage() {
             {[
               { href: `/candidates/${id}/attract`, icon: <Sparkles className="w-5 h-5" />, label: '惹きつけメモ', desc: '候補者に最適化された惹きつけストーリーを生成', color: 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100' },
               { href: `/candidates/${id}/personal-offer`, icon: <Award className="w-5 h-5" />, label: 'ファーストコンタクト', desc: '候補者の価値観に響くオファーレターを作成', color: 'bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100' },
-              { href: `/candidates/${id}/feedback-letter`, icon: <Mail className="w-5 h-5" />, label: '合格・通過レター', desc: '評価理由を反映した合格・通過レター', color: 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100' },
+              { href: `/candidates/${id}/feedback-letter`, icon: <Mail className="w-5 h-5" />, label: '通過・内定レター', desc: '評価理由を反映した通過・内定レター', color: 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100' },
               { href: `/candidates/${id}/brief`, icon: <FileText className="w-5 h-5" />, label: '面接準備シート', desc: '次回面接官のためのブリーフィング資料', color: 'bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100' },
             ].map((item) => (
               <Link key={item.href} href={item.href}

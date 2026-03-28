@@ -11,8 +11,8 @@ const plannedFeatures = [
   },
   {
     icon: Mail,
-    title: '合格・通過レター未送付アラート',
-    description: '面接後48時間以内に合格・通過レターが送付されていない場合にアラートします',
+    title: '通過・内定レター未送付アラート',
+    description: '面接後48時間以内に通過・内定レターが送付されていない場合にアラートします',
   },
   {
     icon: Bell,
