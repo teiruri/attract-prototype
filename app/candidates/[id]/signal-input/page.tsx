@@ -29,6 +29,11 @@ import {
   Loader2,
   ArrowLeft,
   Save,
+  Link2,
+  PenLine,
+  Globe,
+  Paperclip,
+  X,
 } from 'lucide-react'
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000001'
@@ -86,6 +91,11 @@ export default function SignalInputPage() {
 
   const [memo, setMemo] = useState('')
   const [surveyText, setSurveyText] = useState('')
+  const [surveyInputMode, setSurveyInputMode] = useState<'text' | 'url' | 'file'>('text')
+  const [surveyUrl, setSurveyUrl] = useState('')
+  const [surveyUrlLoading, setSurveyUrlLoading] = useState(false)
+  const [surveyUrlError, setSurveyUrlError] = useState('')
+  const [surveyFileName, setSurveyFileName] = useState('')
   const [phase, setPhase] = useState<'input' | 'extracting' | 'result'>('input')
   const [extractionStep, setExtractionStep] = useState(0)
   const [elapsedMs, setElapsedMs] = useState(0)
@@ -96,6 +106,7 @@ export default function SignalInputPage() {
   const [saved, setSaved] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const surveyFileInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch all data on mount
   useEffect(() => {
@@ -162,6 +173,58 @@ export default function SignalInputPage() {
         reader.readAsText(file)
       }
     }
+  }
+
+  // Handle survey URL fetch
+  const handleSurveyUrlFetch = async () => {
+    if (!surveyUrl.trim()) return
+    setSurveyUrlLoading(true)
+    setSurveyUrlError('')
+    try {
+      const res = await fetch('/api/fetch-url-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: surveyUrl.trim() }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        setSurveyUrlError(data.error)
+      } else if (data.text) {
+        const urlLabel = `【アンケートURL: ${surveyUrl.trim()}】`
+        setSurveyText(prev => prev ? `${prev}\n\n${urlLabel}\n${data.text}` : `${urlLabel}\n${data.text}`)
+        setSurveyUrl('')
+        setSurveyInputMode('text') // switch to text view to show result
+      }
+    } catch {
+      setSurveyUrlError('URLの取得に失敗しました')
+    } finally {
+      setSurveyUrlLoading(false)
+    }
+  }
+
+  // Handle survey file upload
+  const handleSurveyFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSurveyFileName(file.name)
+    const ext = file.name.split('.').pop()?.toLowerCase()
+
+    if (['txt', 'csv', 'tsv'].includes(ext || '')) {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const text = ev.target?.result as string
+        const label = `【アンケートファイル: ${file.name}】`
+        setSurveyText(prev => prev ? `${prev}\n\n${label}\n${text}` : `${label}\n${text}`)
+        setSurveyInputMode('text')
+      }
+      reader.readAsText(file)
+    } else if (['pdf', 'doc', 'docx', 'xlsx', 'xls'].includes(ext || '')) {
+      // For non-text files, store the reference and let the API handle it
+      const label = `【アンケートファイル: ${file.name}（アップロード済み — AI解析時に内容を参照）】`
+      setSurveyText(prev => prev ? `${prev}\n\n${label}` : label)
+      setSurveyInputMode('text')
+    }
+    if (surveyFileInputRef.current) surveyFileInputRef.current.value = ''
   }
 
   // Main extraction: call the AI API
@@ -373,19 +436,187 @@ export default function SignalInputPage() {
                 <p className="text-[10px] text-gray-400 mt-1">{memo.length}文字</p>
               </div>
 
-              {/* Survey text */}
+              {/* Survey - 3 input modes */}
               <div className="card p-5 mb-6">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-orange-500" />
-                  選考後アンケート内容
-                </h3>
-                <textarea
-                  value={surveyText}
-                  onChange={(e) => setSurveyText(e.target.value)}
-                  placeholder="選考後に候補者から回収したアンケート内容を貼り付けてください。&#10;例：当社の印象、志望度の変化、他社状況、不安に感じたこと など"
-                  rows={5}
-                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed resize-none"
-                />
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-orange-500" />
+                    選考後アンケート内容
+                  </h3>
+                  {surveyText && (
+                    <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      {surveyText.length}文字取得済み
+                    </span>
+                  )}
+                </div>
+
+                {/* Input mode tabs */}
+                <div className="flex border border-gray-200 rounded-lg overflow-hidden mb-3">
+                  <button
+                    onClick={() => setSurveyInputMode('text')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+                      surveyInputMode === 'text'
+                        ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500'
+                        : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <PenLine className="w-3.5 h-3.5" />
+                    直接入力
+                  </button>
+                  <button
+                    onClick={() => setSurveyInputMode('url')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-l border-gray-200 ${
+                      surveyInputMode === 'url'
+                        ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500'
+                        : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    URLから取得
+                  </button>
+                  <button
+                    onClick={() => setSurveyInputMode('file')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-l border-gray-200 ${
+                      surveyInputMode === 'file'
+                        ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500'
+                        : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Paperclip className="w-3.5 h-3.5" />
+                    ファイル
+                  </button>
+                </div>
+
+                {/* Mode: Direct text input */}
+                {surveyInputMode === 'text' && (
+                  <div>
+                    <textarea
+                      value={surveyText}
+                      onChange={(e) => setSurveyText(e.target.value)}
+                      placeholder={"選考後に候補者から回収したアンケート内容を貼り付けてください。\n例：当社の印象、志望度の変化、他社状況、不安に感じたこと など"}
+                      rows={6}
+                      className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed resize-none"
+                    />
+                    {surveyText && (
+                      <div className="flex justify-end mt-1">
+                        <button onClick={() => setSurveyText('')} className="text-[10px] text-gray-400 hover:text-red-500 flex items-center gap-1">
+                          <X className="w-3 h-3" />
+                          クリア
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Mode: URL fetch */}
+                {surveyInputMode === 'url' && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Google Forms、Typeform、SurveyMonkey等のアンケート結果ページのURLを貼り付けてください
+                    </p>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="url"
+                          value={surveyUrl}
+                          onChange={(e) => { setSurveyUrl(e.target.value); setSurveyUrlError('') }}
+                          placeholder="https://docs.google.com/forms/d/..."
+                          className="w-full text-sm border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          onKeyDown={(e) => e.key === 'Enter' && handleSurveyUrlFetch()}
+                        />
+                      </div>
+                      <button
+                        onClick={handleSurveyUrlFetch}
+                        disabled={!surveyUrl.trim() || surveyUrlLoading}
+                        className={`btn-primary text-xs px-4 whitespace-nowrap ${
+                          !surveyUrl.trim() || surveyUrlLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {surveyUrlLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Link2 className="w-3.5 h-3.5" />
+                        )}
+                        {surveyUrlLoading ? '取得中...' : '取得'}
+                      </button>
+                    </div>
+                    {surveyUrlError && (
+                      <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        {surveyUrlError}
+                      </p>
+                    )}
+                    {surveyText && (
+                      <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                        <p className="text-xs text-emerald-700 font-medium mb-1 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          取得済みアンケートデータ
+                        </p>
+                        <p className="text-[11px] text-emerald-600 line-clamp-3">{surveyText.substring(0, 200)}...</p>
+                        <button
+                          onClick={() => setSurveyInputMode('text')}
+                          className="text-[10px] text-indigo-600 hover:text-indigo-800 mt-1"
+                        >
+                          全文を確認・編集 →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Mode: File upload */}
+                {surveyInputMode === 'file' && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">
+                      アンケート結果のファイル（PDF、Excel、CSV、テキスト等）をアップロード
+                    </p>
+                    <input
+                      ref={surveyFileInputRef}
+                      type="file"
+                      accept=".txt,.csv,.tsv,.pdf,.doc,.docx,.xlsx,.xls"
+                      className="hidden"
+                      onChange={handleSurveyFileUpload}
+                    />
+                    <button
+                      onClick={() => surveyFileInputRef.current?.click()}
+                      className="w-full border-2 border-dashed border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 rounded-xl p-6 text-center cursor-pointer transition-all"
+                    >
+                      {surveyFileName ? (
+                        <>
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                          <p className="text-sm font-medium text-emerald-700">{surveyFileName}</p>
+                          <p className="text-xs text-emerald-500 mt-1">読み込み完了</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm font-medium text-gray-600">
+                            クリックしてファイルを選択
+                          </p>
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            TXT, CSV, PDF, Word, Excel に対応
+                          </p>
+                        </>
+                      )}
+                    </button>
+                    {surveyText && (
+                      <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                        <p className="text-xs text-emerald-700 font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          アンケートデータ取得済み（{surveyText.length}文字）
+                        </p>
+                        <button
+                          onClick={() => setSurveyInputMode('text')}
+                          className="text-[10px] text-indigo-600 hover:text-indigo-800 mt-1"
+                        >
+                          内容を確認・編集 →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Error */}
