@@ -173,9 +173,21 @@ function mapEvalResultToDBResult(evalResult: string): string {
   }
 }
 
-function createEmptyFormState(): InterviewFormState {
+const STAGE_ORDER = ['interview_1', 'interview_2', 'interview_3', 'interview_final']
+
+function getNextStage(existingInterviews?: InterviewRecord[]): string {
+  if (!existingInterviews || existingInterviews.length === 0) return 'interview_1'
+  const existingStages = existingInterviews.map(iv => iv.stage)
+  for (const stage of STAGE_ORDER) {
+    if (!existingStages.includes(stage)) return stage
+  }
+  // All stages exist — default to final
+  return 'interview_final'
+}
+
+function createEmptyFormState(existingInterviews?: InterviewRecord[]): InterviewFormState {
   return {
-    stage: 'interview_1',
+    stage: getNextStage(existingInterviews),
     interviewer_name: '',
     interviewer_role: '',
     interview_date: new Date().toISOString().split('T')[0],
@@ -289,8 +301,15 @@ export default function CandidateDetailPage() {
 
   // New interview form
   const [showNewForm, setShowNewForm] = useState(false)
-  const [newFormState, setNewFormState] = useState<InterviewFormState>(createEmptyFormState())
+  const [newFormState, setNewFormState] = useState<InterviewFormState>(createEmptyFormState(interviews))
   const [savingNew, setSavingNew] = useState(false)
+
+  // Update new form default stage when interviews change
+  useEffect(() => {
+    if (!showNewForm) {
+      setNewFormState(prev => ({ ...prev, stage: getNextStage(interviews) }))
+    }
+  }, [interviews, showNewForm])
 
   // File upload
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set())
@@ -482,7 +501,7 @@ export default function CandidateDetailPage() {
           setInterviews(refreshData.interviews || [])
         }
         setShowNewForm(false)
-        setNewFormState(createEmptyFormState())
+        setNewFormState(createEmptyFormState(interviews))
       }
     } catch {
       // show error inline
@@ -1240,7 +1259,7 @@ export default function CandidateDetailPage() {
                     新しい選考を追加
                   </h3>
                   <button
-                    onClick={() => { setShowNewForm(false); setNewFormState(createEmptyFormState()) }}
+                    onClick={() => { setShowNewForm(false); setNewFormState(createEmptyFormState(interviews)) }}
                     className="text-gray-400 hover:text-gray-600"
                   >
                     <X className="w-4 h-4" />
@@ -1268,7 +1287,7 @@ export default function CandidateDetailPage() {
                     {savingNew ? '保存中...' : '保存する'}
                   </button>
                   <button
-                    onClick={() => { setShowNewForm(false); setNewFormState(createEmptyFormState()) }}
+                    onClick={() => { setShowNewForm(false); setNewFormState(createEmptyFormState(interviews)) }}
                     className="btn-secondary"
                   >
                     キャンセル
