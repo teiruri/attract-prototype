@@ -418,6 +418,9 @@ export default function RevpReportPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [funnelData, setFunnelData] = useState<any>(null)
   const [insights, setInsights] = useState<any[]>([])
+  const [surveySummary, setSurveySummary] = useState<any>(null)
+  const [jobs, setJobs] = useState<any[]>([])
+  const [selectedJobId, setSelectedJobId] = useState<string>('all')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const updateFileInputRef = useRef<HTMLInputElement>(null)
 
@@ -427,7 +430,7 @@ export default function RevpReportPage() {
     return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
   }, [data.scores])
 
-  // Fetch existing REVP data
+  // Fetch existing REVP data and jobs list
   useEffect(() => {
     async function fetchData() {
       try {
@@ -438,16 +441,32 @@ export default function RevpReportPage() {
           setData(revp)
         }
 
-        // Fetch real recruitment funnel data
-        const insightsRes = await fetch('/api/recruitment-insights')
-        const insightsData = await insightsRes.json()
-        if (insightsData.funnel) setFunnelData(insightsData.funnel)
-        if (insightsData.insights) setInsights(insightsData.insights)
+        // Fetch jobs list for the selector
+        const jobsRes = await fetch(`/api/jobs?tenant_id=${TENANT_ID}`)
+        const jobsData = await jobsRes.json()
+        setJobs(jobsData.jobs || [])
       } catch {}
       finally { setLoading(false) }
     }
     fetchData()
   }, [])
+
+  // Fetch recruitment insights (reactive to selectedJobId)
+  useEffect(() => {
+    async function fetchInsights() {
+      try {
+        const insightsUrl = selectedJobId === 'all'
+          ? '/api/recruitment-insights'
+          : `/api/recruitment-insights?job_id=${selectedJobId}`
+        const insightsRes = await fetch(insightsUrl)
+        const insightsData = await insightsRes.json()
+        if (insightsData.funnel) setFunnelData(insightsData.funnel)
+        if (insightsData.insights) setInsights(insightsData.insights)
+        if (insightsData.survey_summary) setSurveySummary(insightsData.survey_summary)
+      } catch {}
+    }
+    fetchInsights()
+  }, [selectedJobId])
 
   const updateScore = (key: string, value: number) => {
     setData(prev => ({
@@ -776,9 +795,21 @@ export default function RevpReportPage() {
         const journeyStages = funnelData?.stages || JOURNEY_STAGES
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-base font-bold text-gray-900">採用成功ジャーニー</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-indigo-500" />
+                採用成功ジャーニー
+              </h2>
+              <select
+                value={selectedJobId}
+                onChange={(e) => setSelectedJobId(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">全求人</option>
+                {jobs.map((job: any) => (
+                  <option key={job.id} value={job.id}>{job.title}</option>
+                ))}
+              </select>
             </div>
             <p className="text-xs text-gray-400 mb-4">認知から承諾までの各ステージにおける通過人数と転換率{!funnelData ? '（サンプルデータ）' : ''}</p>
             <div className="overflow-x-auto">

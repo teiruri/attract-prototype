@@ -33,6 +33,7 @@ import {
   ArrowRight,
   MapPin,
   Eye,
+  MessageSquare,
 } from 'lucide-react'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import PredictionCard from './components/PredictionCard'
@@ -108,6 +109,7 @@ interface InterviewFormState {
   handoff_to_interviewer: string
   handoff_to_hr: string
   temperature_score: number
+  candidate_survey_text: string
 }
 
 interface ScoresData {
@@ -247,6 +249,7 @@ function createEmptyFormState(existingInterviews?: InterviewRecord[]): Interview
     criteria: DEFAULT_CRITERIA.map(c => ({ ...c })),
     pass_reason: '', handoff_to_interviewer: '', handoff_to_hr: '',
     temperature_score: 5,
+    candidate_survey_text: '',
   }
 }
 
@@ -264,6 +267,7 @@ function interviewToFormState(iv: InterviewRecord): InterviewFormState {
     handoff_to_interviewer: eval_?.handoff_to_interviewer || '',
     handoff_to_hr: eval_?.handoff_to_hr || '',
     temperature_score: iv.temperature_score || 5,
+    candidate_survey_text: (iv.candidate_survey?.raw_text as string) || (JSON.stringify(iv.candidate_survey || {}, null, 2) === '{}' ? '' : JSON.stringify(iv.candidate_survey || {}, null, 2)),
   }
 }
 
@@ -529,6 +533,9 @@ export default function CandidateDetailPage() {
         },
         temperature_score: formState.temperature_score,
         result: mapEvalResultToDBResult(formState.evaluation_result),
+        candidate_survey: formState.candidate_survey_text
+          ? { raw_text: formState.candidate_survey_text, collected_at: new Date().toISOString() }
+          : {},
       }
 
       const res = await fetch(`/api/candidates/${id}/interviews`, {
@@ -571,6 +578,9 @@ export default function CandidateDetailPage() {
         },
         temperature_score: newFormState.temperature_score,
         result: mapEvalResultToDBResult(newFormState.evaluation_result),
+        candidate_survey: newFormState.candidate_survey_text
+          ? { raw_text: newFormState.candidate_survey_text, collected_at: new Date().toISOString() }
+          : {},
       }
 
       const res = await fetch(`/api/candidates/${id}/interviews`, {
@@ -762,6 +772,21 @@ export default function CandidateDetailPage() {
         <textarea value={form.interview_text} onChange={(e) => onUpdate('interview_text', e.target.value)}
           placeholder="面接中の気づきやメモ..." rows={4}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+      </div>
+      {/* 選考後アンケート */}
+      <div className="border-t border-gray-100 pt-4 mt-4">
+        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-orange-500" />
+          選考後アンケート
+        </h4>
+        <p className="text-xs text-gray-400 mb-2">候補者から回収したアンケート内容を入力してください（任意）</p>
+        <textarea
+          value={form.candidate_survey_text}
+          onChange={(e) => onUpdate('candidate_survey_text', e.target.value)}
+          placeholder="当社の印象、志望度の変化、他社の選考状況、不安に感じたこと など"
+          rows={4}
+          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+        />
       </div>
       <div>
         <label className="text-xs font-medium text-gray-500 mb-2 block">録画・書き起こしアップロード</label>

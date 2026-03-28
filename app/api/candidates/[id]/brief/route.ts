@@ -79,7 +79,11 @@ ${iv.stage}: 結果=${iv.result || '未評価'}, 志望度=${iv.temperature_scor
 合格理由: ${iv.interviewer_evaluation?.pass_reason || '未入力'}
 申し送り: ${iv.interviewer_evaluation?.handoff_to_interviewer || '未入力'}
 面接メモ: ${iv.interview_text || '未入力'}
-`).join('\n')}`
+アンケート回答: ${iv.candidate_survey?.raw_text || (iv.candidate_survey && Object.keys(iv.candidate_survey).length > 0 ? JSON.stringify(iv.candidate_survey) : '未回収')}
+`).join('\n')}
+
+注意事項:
+- 候補者アンケートの回答内容がある場合は、候補者の本音・志望度・不安を理解する重要な手がかりとして活用すること`
       }]
     })
 

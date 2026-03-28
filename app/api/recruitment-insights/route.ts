@@ -32,6 +32,7 @@ interface Interview {
   temperature_score: number | null
   interview_date: string | null
   interviewer_evaluation: Record<string, unknown> | null
+  candidate_survey: Record<string, unknown> | null
 }
 
 interface Candidate {
@@ -49,12 +50,19 @@ export async function GET(req: NextRequest) {
     const db = createServerClient()
     const { searchParams } = new URL(req.url)
     const tenantId = searchParams.get('tenant_id') || TENANT_ID
+    const jobId = searchParams.get('job_id') // optional filter
 
     // Fetch all candidates with their interviews and job info
-    const { data: candidates, error: candError } = await db
+    let query = db
       .from('candidates')
-      .select('id, job_id, status, current_stage, created_at, interviews(id, candidate_id, job_id, stage, result, temperature_score, interview_date, interviewer_evaluation), jobs(id, title)')
+      .select('id, job_id, status, current_stage, created_at, interviews(id, candidate_id, job_id, stage, result, temperature_score, interview_date, interviewer_evaluation, candidate_survey), jobs(id, title)')
       .eq('tenant_id', tenantId)
+
+    if (jobId) {
+      query = query.eq('job_id', jobId)
+    }
+
+    const { data: candidates, error: candError } = await query
 
     if (candError) {
       return NextResponse.json({ error: candError.message }, { status: 500 })
@@ -104,6 +112,9 @@ export async function GET(req: NextRequest) {
     // Generate insights
     const insights = generateInsights(allCandidates, conversions, perJob)
 
+    // Survey summary
+    const surveySummary = buildSurveySummary(allCandidates)
+
     // Summary
     const allInterviews = allCandidates.flatMap(c => c.interviews || [])
     const allTemps = allInterviews
@@ -128,6 +139,7 @@ export async function GET(req: NextRequest) {
       },
       per_job: perJob,
       insights,
+      survey_summary: surveySummary,
       summary: {
         total_candidates: totalCount,
         avg_days_in_pipeline: avgDaysInPipeline,
@@ -333,4 +345,77 @@ function generateInsights(
   }
 
   return insights
+}
+
+// ---------------------------------------------------------------------------
+// Survey Summary (keyword-based sentiment analysis)
+// ---------------------------------------------------------------------------
+
+const POSITIVE_KEYWORDS = ['魅力', '成長', 'やりがい', '楽しい', '良い', '素晴らしい', '期待', '共感', '安心', '挑戦']
+const NEGATIVE_KEYWORDS = ['不安', '給与', '残業', '懸念', '心配', '他社', '迷い', '待遇', '離職', '厳しい']
+
+function buildSurveySummary(candidates: Candidate[]) {
+  const allInterviews = candidates.flatMap(c => c.interviews || [])
+
+  // Collect interviews that have non-empty candidate_survey
+  const surveyed = allInterviews.filter(iv => {
+    if (!iv.candidate_survey) return false
+    const survey = iv.candidate_survey
+    if (typeof survey === 'object' && Object.keys(survey).length === 0) return false
+    return true
+  })
+
+  const totalCollected = surveyed.length
+
+  // Extract text from each survey for keyword scanning
+  const surveyTexts = surveyed.map(iv => {
+    const survey = iv.candidate_survey!
+    if (typeof survey === 'string') return survey
+    // Try raw_text field first, then stringify the whole object
+    const rawText = (survey as Record<string, unknown>).raw_text
+    if (typeof rawText === 'string') return rawText
+    return JSON.stringify(survey)
+  })
+
+  // Count concerns (surveys containing any negative keyword)
+  let withConcerns = 0
+  const positiveHits = new Map<string, number>()
+  const negativeHits = new Map<string, number>()
+
+  for (const text of surveyTexts) {
+    let hasConcern = false
+    for (const kw of NEGATIVE_KEYWORDS) {
+      if (text.includes(kw)) {
+        hasConcern = true
+        negativeHits.set(kw, (negativeHits.get(kw) || 0) + 1)
+      }
+    }
+    if (hasConcern) withConcerns++
+
+    for (const kw of POSITIVE_KEYWORDS) {
+      if (text.includes(kw)) {
+        positiveHits.set(kw, (positiveHits.get(kw) || 0) + 1)
+      }
+    }
+  }
+
+  // Sort by frequency and take top keywords
+  const sortedPositive = Array.from(positiveHits.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([kw]) => kw)
+    .slice(0, 5)
+
+  const sortedNegative = Array.from(negativeHits.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([kw]) => kw)
+    .slice(0, 5)
+
+  return {
+    total_collected: totalCollected,
+    with_concerns: withConcerns,
+    avg_sentiment_keywords: {
+      positive: sortedPositive,
+      negative: sortedNegative,
+    },
+  }
 }

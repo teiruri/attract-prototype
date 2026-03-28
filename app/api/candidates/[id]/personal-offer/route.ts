@@ -79,6 +79,7 @@ ${iv.stage}: 結果=${iv.result || '未評価'}, 志望度=${iv.temperature_scor
 合格理由: ${iv.interviewer_evaluation?.pass_reason || '未入力'}
 申し送り: ${iv.interviewer_evaluation?.handoff_to_interviewer || '未入力'}
 面接メモ: ${iv.interview_text || '未入力'}
+アンケート回答: ${iv.candidate_survey?.raw_text || (iv.candidate_survey && Object.keys(iv.candidate_survey).length > 0 ? JSON.stringify(iv.candidate_survey) : '未回収')}
 `).join('\n')}`
       }]
     })
