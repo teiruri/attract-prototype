@@ -63,7 +63,7 @@ const STAGE_LABELS: Record<string, string> = {
   hired: '内定承諾',
   active: '選考中',
   gd: 'グループディスカッション',
-  presentation: 'プレゼン選考',
+  internship: 'インターン',
   trial: '体験入社・ワークサンプル',
   briefing: '説明会',
 }
@@ -82,7 +82,7 @@ const STAGE_COLORS: Record<string, string> = {
   hired: 'bg-emerald-50 text-emerald-600 border-emerald-200',
   active: 'bg-gray-100 text-gray-600 border-gray-200',
   gd: 'bg-orange-50 text-orange-600 border-orange-200',
-  presentation: 'bg-pink-50 text-pink-600 border-pink-200',
+  internship: 'bg-pink-50 text-pink-600 border-pink-200',
   trial: 'bg-lime-50 text-lime-600 border-lime-200',
 }
 

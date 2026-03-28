@@ -98,7 +98,7 @@ const SURVEY_FEEDBACK = [
 
 const NEXT_ACTIONS = [
   { text: 'ビズリーチ・LinkedInでのスカウト配信を開始', done: false },
-  { text: '面接官向けブリーフィング資料にキャリアパス事例を追加', done: false },
+  { text: '面接準備資料にキャリアパス事例を追加', done: false },
   { text: '書類選考→一次面接のリードタイム短縮（目標: 3日以内）', done: false },
   { text: '選考結果通知の48時間以内ルールを設定', done: true },
   { text: '二次面接の評価ルーブリックを作成・共有', done: false },
@@ -524,7 +524,7 @@ export default function RecruitmentSummaryPage() {
                   level="important"
                   label="重要"
                   title="REVP「成長機会」の訴求強化"
-                  description="面接時に具体的なキャリアパス事例を提示。入社2年でマネージャーに昇格した事例などを面接官ブリーフに追加。"
+                  description="面接時に具体的なキャリアパス事例を提示。入社2年でマネージャーに昇格した事例などを面接準備資料に追加。"
                   metric="期待効果: 候補者志望度+15pt"
                 />
 

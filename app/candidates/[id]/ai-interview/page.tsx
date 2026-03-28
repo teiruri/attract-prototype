@@ -363,7 +363,7 @@ export default function AIInterviewPage() {
                   { label: '候補者カルテに反映済み', icon: FileText },
                   { label: '惹きつけ戦略の算出に使用', icon: Sparkles },
                   { label: '合格通知レター生成に反映', icon: Target },
-                  { label: '面接官ブリーフィングに反映', icon: MessageSquare },
+                  { label: '面接準備資料に反映', icon: MessageSquare },
                   { label: '内定予測・承諾予測の算出に使用', icon: TrendingUp },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-2.5">

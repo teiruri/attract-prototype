@@ -122,7 +122,7 @@ const STAGE_OPTIONS = [
   { value: 'interview_final', label: '最終面接' },
   { value: 'aptitude', label: '適性検査' },
   { value: 'gd', label: 'グループディスカッション' },
-  { value: 'presentation', label: 'プレゼン選考' },
+  { value: 'internship', label: 'インターン' },
   { value: 'trial', label: '体験入社・ワークサンプル' },
   { value: 'offer', label: 'オファー面談' },
 ]
@@ -143,7 +143,7 @@ function getStageLabel(stage: string): string {
     interview_3: '三次面接', interview_final: '最終面接',
     final: '最終面接', offer: 'オファー面談', hired: '内定承諾',
     briefing: '説明会', es: 'ES選考', aptitude: '適性検査',
-    gd: 'グループディスカッション', presentation: 'プレゼン選考',
+    gd: 'グループディスカッション', internship: 'インターン',
     trial: '体験入社・ワークサンプル', active: '選考中',
   }
   return labels[stage] || stage || '選考中'
@@ -156,7 +156,7 @@ function getStageColor(stage: string): string {
     interview_3: 'bg-violet-50 text-violet-600', interview_final: 'bg-purple-50 text-purple-600',
     final: 'bg-purple-50 text-purple-600', offer: 'bg-amber-50 text-amber-600',
     hired: 'bg-emerald-50 text-emerald-600', aptitude: 'bg-cyan-50 text-cyan-600',
-    gd: 'bg-orange-50 text-orange-600', presentation: 'bg-pink-50 text-pink-600',
+    gd: 'bg-orange-50 text-orange-600', internship: 'bg-pink-50 text-pink-600',
     trial: 'bg-lime-50 text-lime-600',
   }
   return colors[stage] || 'bg-gray-100 text-gray-600'
