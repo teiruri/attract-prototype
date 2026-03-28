@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +33,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ファイルが空です' }, { status: 400 })
     }
 
+    // Upload PDF to Supabase Storage
+    let pdfUrl: string | null = null
     const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext === 'pdf') {
+      try {
+        const fileName = `revp_${Date.now()}.pdf`
+        const filePath = `revp-reports/${fileName}`
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from('documents')
+          .upload(filePath, Buffer.from(arrayBuffer), {
+            contentType: 'application/pdf',
+            upsert: true,
+          })
+        if (!uploadError) {
+          const { data: urlData } = supabaseAdmin.storage
+            .from('documents')
+            .getPublicUrl(filePath)
+          pdfUrl = urlData?.publicUrl || null
+        } else {
+          console.warn('revp-analyze: PDF upload to storage failed:', uploadError)
+        }
+      } catch (storageErr) {
+        console.warn('revp-analyze: PDF storage error (continuing):', storageErr)
+      }
+    }
+
     let userContent: Anthropic.MessageCreateParams['messages'][0]['content']
 
     if (ext === 'pdf') {
@@ -80,7 +111,7 @@ export async function POST(req: NextRequest) {
       console.error('revp-analyze: JSON parse failed:', parseErr, 'Matched text:', jsonMatch[0])
       return NextResponse.json({ error: 'JSONのパースに失敗しました', raw_text: responseText }, { status: 500 })
     }
-    return NextResponse.json({ revp_data: revpData, raw_text: responseText })
+    return NextResponse.json({ revp_data: revpData, raw_text: responseText, pdf_url: pdfUrl })
   } catch (err: unknown) {
     console.error('revp-analyze error:', err)
     const message = err instanceof Error ? err.message : String(err)
@@ -114,16 +145,22 @@ const PROMPT = `この文書はREVP（Realistic Employee Value Proposition）診
   各要素は { label: string, value: string, context: string }。
   例: { label: "社員満足度", value: "87%", context: "前年比+5pt" }
 - motivation_journey: 採用プロセスの各段階における候補者の志望度合い・関心度の推移データ。
-  PDFに記載がある場合は、新卒・中途・職種別など区分ごとの折れ線グラフデータを抽出してください。
+  PDF内に新卒採用と中途採用で別々のページ・セクションに記載されている場合は、
+  必ずそれぞれを別の系列（category）として抽出してください。
+  職種別のデータがある場合もそれぞれ別系列としてください。
   形式: オブジェクトの配列。各要素は以下の構造:
   {
-    category: string,  // 区分名（例: "新卒", "中途", "エンジニア職", "営業職"）
+    category: string,  // 区分名（例: "新卒採用", "中途採用", "エンジニア職", "営業職"）
     data_points: [
       { stage: string, score: number }  // stage: 採用ステージ名, score: 志望度スコア（0-100）
     ]
   }
-  例: { category: "新卒", data_points: [{ stage: "認知", score: 45 }, { stage: "説明会", score: 62 }, { stage: "一次面接", score: 71 }, { stage: "内定", score: 85 }] }
-  PDFに明確な数値がない場合でも、記述内容から推定してください。
+  例: [
+    { category: "新卒採用", data_points: [{ stage: "認知", score: 45 }, { stage: "説明会", score: 62 }, { stage: "一次面接", score: 71 }, { stage: "内定", score: 85 }] },
+    { category: "中途採用", data_points: [{ stage: "認知", score: 55 }, { stage: "カジュアル面談", score: 68 }, { stage: "一次面接", score: 75 }, { stage: "内定", score: 82 }] }
+  ]
+  PDFに明確な数値がない場合でも、グラフや記述内容から推定してください。
+  折れ線グラフ・棒グラフ・志望度の変化に言及する箇所は注意深く読み取ってください。
   区分（新卒/中途/職種など）が記載されていない場合は "全体" として1系列のみ返してください。
 
 必ず有効なJSONのみを返してください。マークダウンのコードブロックや説明文は不要です。`

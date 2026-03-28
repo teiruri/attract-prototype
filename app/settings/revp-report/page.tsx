@@ -284,6 +284,91 @@ function MotivationJourneyChart({ journeyData }: { journeyData: Array<{ category
   )
 }
 
+// --- Motivation Journey Section with category dropdown ---
+function MotivationJourneySection({ journeyData, hasScores }: {
+  journeyData?: Array<{ category: string; data_points: Array<{ stage: string; score: number }> }>
+  hasScores: boolean
+}) {
+  const [selectedCategory, setSelectedCategory] = useState<string>('__all__')
+
+  if (!journeyData || journeyData.length === 0) {
+    if (!hasScores) return null
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <TrendingUp className="w-4 h-4 text-gray-300" />
+          <h2 className="text-sm font-semibold text-gray-400">採用プロセスにおける志望度推移</h2>
+        </div>
+        <p className="text-xs text-gray-400 text-center py-6">
+          REVPレポートPDFに志望度推移のデータが含まれていないか、まだPDFがアップロードされていません。<br />
+          志望度推移データを含むPDFをアップロードすると、新卒・中途・職種別の折れ線グラフが表示されます。
+        </p>
+      </div>
+    )
+  }
+
+  const categories = journeyData.map(s => s.category)
+  const displayData = selectedCategory === '__all__'
+    ? journeyData
+    : journeyData.filter(s => s.category === selectedCategory)
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-indigo-500" />
+          採用プロセスにおける志望度推移
+        </h2>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">PDFから抽出</span>
+          {categories.length > 1 && (
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="__all__">すべて表示</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 mb-4">
+        REVPレポートに記載された、採用ステージごとの候補者の志望度合いの推移
+        {selectedCategory !== '__all__' ? `（${selectedCategory}）` : '（区分別）'}
+      </p>
+      <div className="overflow-x-auto">
+        <div className="min-w-[600px]">
+          <MotivationJourneyChart journeyData={displayData} />
+        </div>
+      </div>
+      {/* Series summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+        {displayData.map((series, si) => {
+          const color = JOURNEY_SERIES_COLORS[si % JOURNEY_SERIES_COLORS.length]
+          const scores = series.data_points.map(dp => dp.score)
+          const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
+          const trend = scores.length >= 2 ? scores[scores.length - 1] - scores[0] : 0
+          return (
+            <div key={si} className="rounded-xl border border-gray-100 p-3 flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color.fill }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{series.category}</p>
+                <p className="text-xs text-gray-400">平均 {avg} / {series.data_points.length}ステージ</p>
+              </div>
+              <div className={`text-xs font-bold ${trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-rose-600' : 'text-gray-400'}`}>
+                {trend > 0 ? `+${trend}` : trend < 0 ? `${trend}` : '±0'}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // --- Score Card Component ---
 function ScoreCard({ cat, score, onScoreChange }: {
   cat: typeof REVP_CATEGORIES[0]
@@ -651,14 +736,20 @@ export default function RevpReportPage() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* View full REVP results */}
-            {data.raw_text && (
+            {/* View full REVP results — open PDF or fallback to raw text */}
+            {(data.pdf_url || data.raw_text) && (
               <button
-                onClick={() => setShowRawText(true)}
+                onClick={() => {
+                  if (data.pdf_url) {
+                    window.open(data.pdf_url, '_blank', 'noopener,noreferrer')
+                  } else {
+                    setShowRawText(true)
+                  }
+                }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 rounded-xl text-sm font-medium transition-colors backdrop-blur-sm"
               >
                 <Eye className="w-4 h-4" />
-                REVPの詳細結果を見る
+                REVPレポートを開く
               </button>
             )}
             {/* History */}
@@ -817,60 +908,7 @@ export default function RevpReportPage() {
       )}
 
       {/* ====== MOTIVATION JOURNEY (from PDF) ====== */}
-      {data.motivation_journey && data.motivation_journey.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-indigo-500" />
-              採用プロセスにおける志望度推移
-            </h2>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">PDFから抽出</span>
-          </div>
-          <p className="text-xs text-gray-400 mb-4">
-            REVPレポートに記載された、採用ステージごとの候補者の志望度合いの推移（区分別）
-          </p>
-          <div className="overflow-x-auto">
-            <div className="min-w-[600px]">
-              <MotivationJourneyChart journeyData={data.motivation_journey} />
-            </div>
-          </div>
-          {/* Series summary cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-            {data.motivation_journey.map((series, si) => {
-              const color = JOURNEY_SERIES_COLORS[si % JOURNEY_SERIES_COLORS.length]
-              const scores = series.data_points.map(dp => dp.score)
-              const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
-              const trend = scores.length >= 2 ? scores[scores.length - 1] - scores[0] : 0
-              return (
-                <div key={si} className="rounded-xl border border-gray-100 p-3 flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color.fill }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{series.category}</p>
-                    <p className="text-xs text-gray-400">平均 {avg} / {series.data_points.length}ステージ</p>
-                  </div>
-                  <div className={`text-xs font-bold ${trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-rose-600' : 'text-gray-400'}`}>
-                    {trend > 0 ? `+${trend}` : trend < 0 ? `${trend}` : '±0'}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state for motivation journey */}
-      {(!data.motivation_journey || data.motivation_journey.length === 0) && Object.keys(data.scores).length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-gray-300" />
-            <h2 className="text-sm font-semibold text-gray-400">採用プロセスにおける志望度推移</h2>
-          </div>
-          <p className="text-xs text-gray-400 text-center py-6">
-            REVPレポートPDFに志望度推移のデータが含まれていないか、まだPDFがアップロードされていません。<br />
-            志望度推移データを含むPDFをアップロードすると、新卒・中途・職種別の折れ線グラフが表示されます。
-          </p>
-        </div>
-      )}
+      <MotivationJourneySection journeyData={data.motivation_journey} hasScores={Object.keys(data.scores).length > 0} />
 
       {/* ====== STRENGTHS ====== */}
       <CollapsibleSection
