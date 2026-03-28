@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import Link from 'next/link'
 import {
   Users,
   Search,
@@ -169,12 +170,25 @@ export default function CandidateTalentPoolPage() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          タレントプール（候補者）
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">タレントプール</h1>
         <p className="text-sm text-gray-500 mt-1">
-          過去の候補者を蓄積し、将来の採用に活かします
+          候補者と社員を管理し、最適なマッチングを実現します
         </p>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
+        <div className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-medium bg-white text-indigo-700 shadow-sm">
+          <Users className="w-4 h-4" />
+          候補者
+        </div>
+        <Link
+          href="/talent-pool/employees"
+          className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/50 transition-colors"
+        >
+          <UserCheck className="w-4 h-4" />
+          社員
+        </Link>
       </div>
 
       {/* Stats */}

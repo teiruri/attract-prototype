@@ -13,6 +13,7 @@ import {
   FileText,
   Database,
   LogOut,
+  UserCheck,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { getSupabase } from '@/lib/supabase'
@@ -38,7 +39,8 @@ const navGroups = [
     label: 'インサイト',
     items: [
       { label: '採用レポート', href: '/recruitment-summary', icon: FileText },
-      { label: 'タレントプール', href: '/talent-pool/candidates', icon: Database },
+      { label: '候補者プール', href: '/talent-pool/candidates', icon: Database },
+      { label: '社員プール', href: '/talent-pool/employees', icon: UserCheck },
     ],
   },
 ]

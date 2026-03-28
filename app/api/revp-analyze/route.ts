@@ -113,5 +113,17 @@ const PROMPT = `この文書はREVP（Realistic Employee Value Proposition）診
 - key_numbers: PDF内の重要な数値データ（オブジェクトの配列）。
   各要素は { label: string, value: string, context: string }。
   例: { label: "社員満足度", value: "87%", context: "前年比+5pt" }
+- motivation_journey: 採用プロセスの各段階における候補者の志望度合い・関心度の推移データ。
+  PDFに記載がある場合は、新卒・中途・職種別など区分ごとの折れ線グラフデータを抽出してください。
+  形式: オブジェクトの配列。各要素は以下の構造:
+  {
+    category: string,  // 区分名（例: "新卒", "中途", "エンジニア職", "営業職"）
+    data_points: [
+      { stage: string, score: number }  // stage: 採用ステージ名, score: 志望度スコア（0-100）
+    ]
+  }
+  例: { category: "新卒", data_points: [{ stage: "認知", score: 45 }, { stage: "説明会", score: 62 }, { stage: "一次面接", score: 71 }, { stage: "内定", score: 85 }] }
+  PDFに明確な数値がない場合でも、記述内容から推定してください。
+  区分（新卒/中途/職種など）が記載されていない場合は "全体" として1系列のみ返してください。
 
 必ず有効なJSONのみを返してください。マークダウンのコードブロックや説明文は不要です。`

@@ -22,16 +22,14 @@ const REVP_CATEGORIES = [
   { key: 'people', label: '人・カルチャー', color: 'bg-orange-500', hex: '#f97316', icon: Heart, description: '社風、人間関係、ロールモデル' },
 ]
 
-// Recruitment journey stages with sample conversion data
-const JOURNEY_STAGES = [
-  { key: 'awareness', label: '認知', shortLabel: '認知', count: 1000 },
-  { key: 'application', label: '応募', shortLabel: '応募', count: 320 },
-  { key: 'document', label: '書類', shortLabel: '書類', count: 180 },
-  { key: 'first_interview', label: '一次', shortLabel: '一次', count: 90 },
-  { key: 'second_interview', label: '二次', shortLabel: '二次', count: 50 },
-  { key: 'final_interview', label: '最終', shortLabel: '最終', count: 28 },
-  { key: 'offer', label: '内定', shortLabel: '内定', count: 18 },
-  { key: 'acceptance', label: '承諾', shortLabel: '承諾', count: 12 },
+// Colors for motivation journey chart series
+const JOURNEY_SERIES_COLORS = [
+  { stroke: '#6366f1', fill: '#6366f1', name: 'indigo' },
+  { stroke: '#10b981', fill: '#10b981', name: 'emerald' },
+  { stroke: '#f59e0b', fill: '#f59e0b', name: 'amber' },
+  { stroke: '#f43f5e', fill: '#f43f5e', name: 'rose' },
+  { stroke: '#06b6d4', fill: '#06b6d4', name: 'cyan' },
+  { stroke: '#a855f7', fill: '#a855f7', name: 'purple' },
 ]
 
 interface RevpHistoryEntry {
@@ -53,6 +51,10 @@ interface RevpData {
   summary?: string
   improvement_areas?: string[]
   key_numbers?: Array<{ label: string; value: string; context: string }>
+  motivation_journey?: Array<{
+    category: string
+    data_points: Array<{ stage: string; score: number }>
+  }>
 }
 
 // --- Radar Chart Component (SVG) ---
@@ -167,36 +169,45 @@ function RadarChart({ scores, size = 320 }: { scores: Record<string, number>; si
   )
 }
 
-// --- Journey Line Chart Component (SVG) ---
-function JourneyLineChart({ stages }: { stages: typeof JOURNEY_STAGES }) {
+// --- Motivation Journey Chart Component (multi-series line chart from PDF) ---
+function MotivationJourneyChart({ journeyData }: { journeyData: Array<{ category: string; data_points: Array<{ stage: string; score: number }> }> }) {
   const width = 700
-  const height = 280
-  const padding = { top: 40, right: 40, bottom: 60, left: 60 }
+  const height = 320
+  const padding = { top: 40, right: 40, bottom: 70, left: 55 }
   const chartW = width - padding.left - padding.right
   const chartH = height - padding.top - padding.bottom
 
-  const maxCount = Math.max(...stages.map(s => s.count))
-  const points = stages.map((s, i) => ({
-    x: padding.left + (chartW / (stages.length - 1)) * i,
-    y: padding.top + chartH - (s.count / maxCount) * chartH,
-    ...s,
-  }))
+  // Collect all unique stages in order
+  const allStages: string[] = []
+  for (const series of journeyData) {
+    for (const dp of series.data_points) {
+      if (!allStages.includes(dp.stage)) allStages.push(dp.stage)
+    }
+  }
 
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-  const areaPath = linePath + ` L${points[points.length - 1].x},${padding.top + chartH} L${points[0].x},${padding.top + chartH} Z`
+  const stageCount = allStages.length
+  if (stageCount === 0) return null
+
+  const getX = (idx: number) => padding.left + (chartW / Math.max(stageCount - 1, 1)) * idx
+  const getY = (score: number) => padding.top + chartH - (score / 100) * chartH
 
   return (
     <svg width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
       <defs>
-        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
-        </linearGradient>
+        {journeyData.map((_, si) => {
+          const color = JOURNEY_SERIES_COLORS[si % JOURNEY_SERIES_COLORS.length]
+          return (
+            <linearGradient key={si} id={`motGrad${si}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color.fill} stopOpacity="0.15" />
+              <stop offset="100%" stopColor={color.fill} stopOpacity="0.02" />
+            </linearGradient>
+          )
+        })}
       </defs>
-      {/* Grid lines */}
-      {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => {
-        const y = padding.top + chartH - frac * chartH
-        const val = Math.round(frac * maxCount)
+
+      {/* Y-axis grid */}
+      {[0, 25, 50, 75, 100].map((val, i) => {
+        const y = getY(val)
         return (
           <g key={i}>
             <line x1={padding.left} y1={y} x2={padding.left + chartW} y2={y} stroke="#f3f4f6" strokeWidth="1" />
@@ -204,27 +215,68 @@ function JourneyLineChart({ stages }: { stages: typeof JOURNEY_STAGES }) {
           </g>
         )
       })}
-      {/* Area fill */}
-      <path d={areaPath} fill="url(#lineGrad)" />
-      {/* Line */}
-      <path d={linePath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Points & labels */}
-      {points.map((p, i) => {
-        const rate = i > 0 ? Math.round((p.count / stages[i - 1].count) * 100) : 100
+
+      {/* X-axis stage labels */}
+      {allStages.map((stage, i) => (
+        <text
+          key={i}
+          x={getX(i)}
+          y={padding.top + chartH + 22}
+          textAnchor="middle"
+          fill="#6b7280"
+          fontSize="10"
+          fontWeight="500"
+        >
+          {stage.length > 8 ? stage.slice(0, 8) + '…' : stage}
+        </text>
+      ))}
+
+      {/* Y-axis label */}
+      <text x={12} y={padding.top + chartH / 2} textAnchor="middle" fill="#9ca3af" fontSize="9" transform={`rotate(-90, 12, ${padding.top + chartH / 2})`}>
+        志望度スコア
+      </text>
+
+      {/* Data series */}
+      {journeyData.map((series, si) => {
+        const color = JOURNEY_SERIES_COLORS[si % JOURNEY_SERIES_COLORS.length]
+        const points = series.data_points.map(dp => {
+          const stageIdx = allStages.indexOf(dp.stage)
+          return { x: getX(stageIdx), y: getY(dp.score), score: dp.score, stage: dp.stage }
+        }).filter(p => !isNaN(p.x))
+
+        if (points.length === 0) return null
+
+        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+        const areaPath = linePath + ` L${points[points.length - 1].x},${padding.top + chartH} L${points[0].x},${padding.top + chartH} Z`
+
         return (
-          <g key={i}>
-            <circle cx={p.x} cy={p.y} r="6" fill="white" stroke="#6366f1" strokeWidth="2.5" />
-            <circle cx={p.x} cy={p.y} r="3" fill="#6366f1" />
-            {/* Count */}
-            <text x={p.x} y={p.y - 14} textAnchor="middle" fill="#1f2937" fontSize="11" fontWeight="700">{p.count}</text>
-            {/* Conversion rate */}
-            {i > 0 && (
-              <text x={p.x} y={p.y - 26} textAnchor="middle" fill={rate >= 50 ? '#10b981' : rate >= 30 ? '#f59e0b' : '#ef4444'} fontSize="9" fontWeight="600">
-                {rate}%
-              </text>
-            )}
-            {/* Stage label */}
-            <text x={p.x} y={padding.top + chartH + 20} textAnchor="middle" fill="#6b7280" fontSize="11" fontWeight="500">{p.label}</text>
+          <g key={si}>
+            {/* Area fill */}
+            <path d={areaPath} fill={`url(#motGrad${si})`} />
+            {/* Line */}
+            <path d={linePath} fill="none" stroke={color.stroke} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Points */}
+            {points.map((p, i) => (
+              <g key={i}>
+                <circle cx={p.x} cy={p.y} r="5" fill="white" stroke={color.stroke} strokeWidth="2" />
+                <circle cx={p.x} cy={p.y} r="2.5" fill={color.stroke} />
+                <text x={p.x} y={p.y - 10} textAnchor="middle" fill={color.stroke} fontSize="9" fontWeight="700">{p.score}</text>
+              </g>
+            ))}
+          </g>
+        )
+      })}
+
+      {/* Legend */}
+      {journeyData.length > 1 && journeyData.map((series, si) => {
+        const color = JOURNEY_SERIES_COLORS[si % JOURNEY_SERIES_COLORS.length]
+        const legendX = padding.left + si * 120
+        const legendY = height - 12
+        return (
+          <g key={si}>
+            <line x1={legendX} y1={legendY} x2={legendX + 16} y2={legendY} stroke={color.stroke} strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx={legendX + 8} cy={legendY} r="3" fill={color.stroke} />
+            <text x={legendX + 22} y={legendY + 4} fill="#374151" fontSize="10" fontWeight="500">{series.category}</text>
           </g>
         )
       })}
@@ -416,11 +468,6 @@ export default function RevpReportPage() {
   const [uploading, setUploading] = useState(false)
   const [showRawText, setShowRawText] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  const [funnelData, setFunnelData] = useState<any>(null)
-  const [insights, setInsights] = useState<any[]>([])
-  const [surveySummary, setSurveySummary] = useState<any>(null)
-  const [jobs, setJobs] = useState<any[]>([])
-  const [selectedJobId, setSelectedJobId] = useState<string>('all')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const updateFileInputRef = useRef<HTMLInputElement>(null)
 
@@ -441,32 +488,11 @@ export default function RevpReportPage() {
           setData(revp)
         }
 
-        // Fetch jobs list for the selector
-        const jobsRes = await fetch(`/api/jobs?tenant_id=${TENANT_ID}`)
-        const jobsData = await jobsRes.json()
-        setJobs(jobsData.jobs || [])
       } catch {}
       finally { setLoading(false) }
     }
     fetchData()
   }, [])
-
-  // Fetch recruitment insights (reactive to selectedJobId)
-  useEffect(() => {
-    async function fetchInsights() {
-      try {
-        const insightsUrl = selectedJobId === 'all'
-          ? '/api/recruitment-insights'
-          : `/api/recruitment-insights?job_id=${selectedJobId}`
-        const insightsRes = await fetch(insightsUrl)
-        const insightsData = await insightsRes.json()
-        if (insightsData.funnel) setFunnelData(insightsData.funnel)
-        if (insightsData.insights) setInsights(insightsData.insights)
-        if (insightsData.survey_summary) setSurveySummary(insightsData.survey_summary)
-      } catch {}
-    }
-    fetchInsights()
-  }, [selectedJobId])
 
   const updateScore = (key: string, value: number) => {
     setData(prev => ({
@@ -790,82 +816,59 @@ export default function RevpReportPage() {
         </div>
       )}
 
-      {/* ====== RECRUITMENT JOURNEY LINE CHART ====== */}
-      {(() => {
-        const journeyStages = funnelData?.stages || JOURNEY_STAGES
-        return (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-indigo-500" />
-                採用成功ジャーニー
-              </h2>
-              <select
-                value={selectedJobId}
-                onChange={(e) => setSelectedJobId(e.target.value)}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="all">全求人</option>
-                {jobs.map((job: any) => (
-                  <option key={job.id} value={job.id}>{job.title}</option>
-                ))}
-              </select>
+      {/* ====== MOTIVATION JOURNEY (from PDF) ====== */}
+      {data.motivation_journey && data.motivation_journey.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-indigo-500" />
+              採用プロセスにおける志望度推移
+            </h2>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">PDFから抽出</span>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">
+            REVPレポートに記載された、採用ステージごとの候補者の志望度合いの推移（区分別）
+          </p>
+          <div className="overflow-x-auto">
+            <div className="min-w-[600px]">
+              <MotivationJourneyChart journeyData={data.motivation_journey} />
             </div>
-            <p className="text-xs text-gray-400 mb-4">認知から承諾までの各ステージにおける通過人数と転換率{!funnelData ? '（サンプルデータ）' : ''}</p>
-            <div className="overflow-x-auto">
-              <div className="min-w-[600px]">
-                <JourneyLineChart stages={journeyStages} />
-              </div>
-            </div>
-            {/* Stage conversion summary */}
-            <div className="grid grid-cols-4 lg:grid-cols-8 gap-2 mt-4">
-              {journeyStages.map((s: any, i: number) => {
-                const rate = i > 0 ? Math.round((s.count / journeyStages[i - 1].count) * 100) : 100
-                return (
-                  <div key={s.key} className="text-center p-2 rounded-lg bg-gray-50">
-                    <p className="text-[10px] text-gray-400">{s.label}</p>
-                    <p className="text-sm font-bold text-gray-800">{s.count}</p>
-                    {i > 0 && (
-                      <p className={`text-[10px] font-semibold ${rate >= 50 ? 'text-emerald-600' : rate >= 30 ? 'text-amber-600' : 'text-rose-600'}`}>
-                        {rate}%
-                      </p>
-                    )}
+          </div>
+          {/* Series summary cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+            {data.motivation_journey.map((series, si) => {
+              const color = JOURNEY_SERIES_COLORS[si % JOURNEY_SERIES_COLORS.length]
+              const scores = series.data_points.map(dp => dp.score)
+              const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
+              const trend = scores.length >= 2 ? scores[scores.length - 1] - scores[0] : 0
+              return (
+                <div key={si} className="rounded-xl border border-gray-100 p-3 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color.fill }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{series.category}</p>
+                    <p className="text-xs text-gray-400">平均 {avg} / {series.data_points.length}ステージ</p>
                   </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* 採用改善インサイト */}
-      {insights.length > 0 && (
-        <div className="card p-6 mb-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-violet-500" />
-            採用プロセス改善のヒント
-          </h2>
-          <div className="space-y-3">
-            {insights.map((insight: any, i: number) => (
-              <div key={i} className={`p-4 rounded-xl border ${
-                insight.type === 'critical' ? 'bg-red-50 border-red-200' :
-                insight.type === 'warning' ? 'bg-amber-50 border-amber-200' :
-                'bg-blue-50 border-blue-200'
-              }`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    insight.type === 'critical' ? 'bg-red-200 text-red-800' :
-                    insight.type === 'warning' ? 'bg-amber-200 text-amber-800' :
-                    'bg-blue-200 text-blue-800'
-                  }`}>{insight.area}</span>
+                  <div className={`text-xs font-bold ${trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-rose-600' : 'text-gray-400'}`}>
+                    {trend > 0 ? `+${trend}` : trend < 0 ? `${trend}` : '±0'}
+                  </div>
                 </div>
-                <p className="text-sm text-gray-800 font-medium">{insight.title || insight.message}</p>
-                {insight.suggestion && (
-                  <p className="text-xs text-gray-600 mt-1">💡 {insight.suggestion}</p>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
+        </div>
+      )}
+
+      {/* Empty state for motivation journey */}
+      {(!data.motivation_journey || data.motivation_journey.length === 0) && Object.keys(data.scores).length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4 text-gray-300" />
+            <h2 className="text-sm font-semibold text-gray-400">採用プロセスにおける志望度推移</h2>
+          </div>
+          <p className="text-xs text-gray-400 text-center py-6">
+            REVPレポートPDFに志望度推移のデータが含まれていないか、まだPDFがアップロードされていません。<br />
+            志望度推移データを含むPDFをアップロードすると、新卒・中途・職種別の折れ線グラフが表示されます。
+          </p>
         </div>
       )}
 

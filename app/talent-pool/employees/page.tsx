@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import Link from 'next/link'
 import {
   Users,
   Building2,
@@ -15,6 +16,11 @@ import {
   ChevronDown,
   Loader2,
   AlertCircle,
+  Upload,
+  FileSpreadsheet,
+  ClipboardPaste,
+  Download,
+  CheckCircle2,
 } from 'lucide-react'
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000001'
@@ -82,6 +88,12 @@ export default function EmployeeTalentPoolPage() {
   const [saving, setSaving] = useState(false)
   const [skillsInput, setSkillsInput] = useState('')
   const [tagsInput, setTagsInput] = useState('')
+  const [showBulkModal, setShowBulkModal] = useState(false)
+  const [bulkMode, setBulkMode] = useState<'csv' | 'paste'>('paste')
+  const [bulkText, setBulkText] = useState('')
+  const [bulkImporting, setBulkImporting] = useState(false)
+  const [bulkResult, setBulkResult] = useState<{ success: number; errors: string[] } | null>(null)
+  const csvInputRef = useRef<HTMLInputElement>(null)
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -204,25 +216,147 @@ export default function EmployeeTalentPoolPage() {
     }))
   }
 
+  // --- Bulk Import ---
+  const openBulkModal = () => {
+    setBulkText('')
+    setBulkResult(null)
+    setBulkMode('paste')
+    setShowBulkModal(true)
+  }
+
+  const parseCsvRows = (text: string): Omit<Employee, 'id'>[] => {
+    const lines = text.trim().split('\n').filter(Boolean)
+    if (lines.length === 0) return []
+
+    // Detect header row
+    const firstLine = lines[0].toLowerCase()
+    const hasHeader = firstLine.includes('名前') || firstLine.includes('氏名') || firstLine.includes('name') || firstLine.includes('部署')
+    const dataLines = hasHeader ? lines.slice(1) : lines
+
+    return dataLines.map((line) => {
+      // Support tab or comma as delimiter
+      const cols = line.includes('\t') ? line.split('\t') : line.split(',')
+      const get = (i: number) => (cols[i] || '').trim()
+      return {
+        name: get(0),
+        department: get(1),
+        title: get(2),
+        role: get(3) || '面接官',
+        years_at_company: parseInt(get(4)) || 0,
+        skills: get(5) ? get(5).split(/[;；|｜\/]/).map(s => s.trim()).filter(Boolean) : [],
+        personality_tags: get(6) ? get(6).split(/[;；|｜\/]/).map(s => s.trim()).filter(Boolean) : [],
+        interview_style: get(7) || '',
+        bio: get(8) || '',
+        available_for: get(9) ? get(9).split(/[;；|｜\/]/).map(s => s.trim()).filter(Boolean) : [],
+      }
+    }).filter(e => e.name) // name is required
+  }
+
+  const handleCsvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      setBulkText(text)
+      setBulkMode('csv')
+    }
+    reader.readAsText(file, 'UTF-8')
+
+    if (csvInputRef.current) csvInputRef.current.value = ''
+  }
+
+  const handleBulkImport = async () => {
+    const rows = parseCsvRows(bulkText)
+    if (rows.length === 0) {
+      setBulkResult({ success: 0, errors: ['有効なデータが見つかりませんでした'] })
+      return
+    }
+
+    setBulkImporting(true)
+    const errors: string[] = []
+    let success = 0
+
+    for (const row of rows) {
+      try {
+        const res = await fetch('/api/employees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row),
+        })
+        const json = await res.json()
+        if (json.error) {
+          errors.push(`${row.name}: ${json.error}`)
+        } else {
+          success++
+        }
+      } catch (err) {
+        errors.push(`${row.name}: ${String(err)}`)
+      }
+    }
+
+    setBulkResult({ success, errors })
+    setBulkImporting(false)
+    if (success > 0) fetchEmployees()
+  }
+
+  const downloadCsvTemplate = () => {
+    const header = '氏名,部署,肩書,役割,在籍年数,スキル(;区切り),パーソナリティ(;区切り),面接スタイル,紹介文,対応可能(;区切り)'
+    const sample1 = '山田太郎,エンジニアリング部,テックリード,面接官,5,TypeScript;React;AWS,論理的;共感力,構造化面接,フルスタックエンジニア,面接官;メンター'
+    const sample2 = '田中花子,人事部,採用マネージャー,リクルーター,3,採用戦略;面談設計,コミュニケーション力;傾聴力,カジュアル面談型,採用チームリーダー,リクルーター;社員面談'
+    const bom = '\uFEFF'
+    const csv = bom + [header, sample1, sample2].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'employee_template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            タレントプール（社員）
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">タレントプール</h1>
           <p className="text-sm text-gray-500 mt-1">
-            面接官・リクルーター・メンター候補を管理し、候補者との最適なマッチングを実現
+            候補者と社員を管理し、最適なマッチングを実現します
           </p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openBulkModal}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+          >
+            <Upload className="w-4 h-4" />
+            一括登録
+          </button>
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            社員を追加
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
+        <Link
+          href="/talent-pool/candidates"
+          className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/50 transition-colors"
         >
-          <Plus className="w-4 h-4" />
-          社員を追加
-        </button>
+          <Users className="w-4 h-4" />
+          候補者
+        </Link>
+        <div className="flex items-center gap-2 px-5 py-2 rounded-md text-sm font-medium bg-white text-indigo-700 shadow-sm">
+          <UserCheck className="w-4 h-4" />
+          社員
+        </div>
       </div>
 
       {/* Stats */}
@@ -467,6 +601,141 @@ export default function EmployeeTalentPoolPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Hidden CSV input */}
+      <input ref={csvInputRef} type="file" accept=".csv,.tsv,.txt" onChange={handleCsvFileUpload} className="hidden" />
+
+      {/* Bulk Import Modal */}
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <Upload className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">社員の一括登録</h2>
+                  <p className="text-xs text-gray-400">CSVファイルまたはテキストの貼り付けで複数の社員を一括登録</p>
+                </div>
+              </div>
+              <button onClick={() => setShowBulkModal(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-4">
+              {/* Mode tabs */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBulkMode('paste')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    bulkMode === 'paste' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <ClipboardPaste className="w-4 h-4" />
+                  テキスト貼り付け
+                </button>
+                <button
+                  onClick={() => { setBulkMode('csv'); csvInputRef.current?.click() }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    bulkMode === 'csv' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  CSVアップロード
+                </button>
+                <button
+                  onClick={downloadCsvTemplate}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors ml-auto"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  テンプレート
+                </button>
+              </div>
+
+              {/* Format guide */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <p className="text-xs font-semibold text-gray-700 mb-2">入力フォーマット（カンマまたはタブ区切り）</p>
+                <p className="text-[11px] text-gray-500 font-mono leading-relaxed">
+                  氏名, 部署, 肩書, 役割, 在籍年数, スキル(;区切り), パーソナリティ(;区切り), 面接スタイル, 紹介文, 対応可能(;区切り)
+                </p>
+                <p className="text-[11px] text-gray-400 mt-2">
+                  ※ 必須: 氏名。その他は空欄でもOK。1行目がヘッダー行の場合は自動検出されます。
+                </p>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  例: <span className="font-mono text-gray-500">山田太郎, エンジニアリング部, テックリード, 面接官, 5, TypeScript;React, 論理的;共感力</span>
+                </p>
+              </div>
+
+              {/* Text area */}
+              <textarea
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                rows={10}
+                className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono leading-relaxed"
+                placeholder={`山田太郎, エンジニアリング部, テックリード, 面接官, 5, TypeScript;React;AWS, 論理的;共感力\n田中花子, 人事部, 採用マネージャー, リクルーター, 3, 採用戦略;面談設計, コミュニケーション力\n佐藤次郎, 営業部, 営業部長, マネージャー, 8, 営業戦略;交渉力, 熱量がある;リーダーシップ`}
+              />
+
+              {/* Preview count */}
+              {bulkText.trim() && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Users className="w-4 h-4 text-indigo-500" />
+                  <span className="text-gray-600">
+                    {parseCsvRows(bulkText).length}名のデータを検出
+                  </span>
+                </div>
+              )}
+
+              {/* Result */}
+              {bulkResult && (
+                <div className={`rounded-xl border p-4 ${bulkResult.errors.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className={`w-5 h-5 ${bulkResult.errors.length > 0 ? 'text-amber-500' : 'text-emerald-500'}`} />
+                    <span className="text-sm font-semibold text-gray-800">
+                      {bulkResult.success}名を登録しました
+                      {bulkResult.errors.length > 0 && ` / ${bulkResult.errors.length}件のエラー`}
+                    </span>
+                  </div>
+                  {bulkResult.errors.length > 0 && (
+                    <div className="space-y-1 mt-2">
+                      {bulkResult.errors.map((err, i) => (
+                        <p key={i} className="text-xs text-amber-700">{err}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <button
+                onClick={() => setShowBulkModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                {bulkResult && bulkResult.success > 0 ? '閉じる' : 'キャンセル'}
+              </button>
+              <button
+                onClick={handleBulkImport}
+                disabled={bulkImporting || !bulkText.trim()}
+                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkImporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    登録中...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    一括登録する
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

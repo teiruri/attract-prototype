@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   FileBarChart,
   Users,
@@ -470,6 +470,7 @@ export default function RecruitmentSummaryPage() {
   const [data, setData] = useState<ProcessedData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedJobId, setSelectedJobId] = useState<string>('all')
 
   const loadData = useCallback(async () => {
     try {
@@ -483,6 +484,31 @@ export default function RecruitmentSummaryPage() {
       setLoading(false)
     }
   }, [])
+
+  // Filter data by selected job
+  const filteredData = useMemo((): ProcessedData | null => {
+    if (!data) return null
+    if (selectedJobId === 'all') return data
+
+    const filteredCandidates = data.candidates.filter(c => c.job_id === selectedJobId)
+    const filteredCandidateIds = new Set(filteredCandidates.map(c => c.id))
+
+    const filteredInterviewMap = new Map<string, Interview[]>()
+    const filteredAllInterviews: Interview[] = []
+    for (const [candidateId, interviews] of data.interviews) {
+      if (filteredCandidateIds.has(candidateId)) {
+        filteredInterviewMap.set(candidateId, interviews)
+        filteredAllInterviews.push(...interviews)
+      }
+    }
+
+    return {
+      candidates: filteredCandidates,
+      jobs: data.jobs, // keep all jobs for the dropdown
+      interviews: filteredInterviewMap,
+      allInterviews: filteredAllInterviews,
+    }
+  }, [data, selectedJobId])
 
   useEffect(() => {
     loadData()
@@ -555,17 +581,43 @@ export default function RecruitmentSummaryPage() {
     )
   }
 
-  const kpis = calcKPIs(data)
-  const funnel = calcFunnel(data)
-  const jobStats = calcJobStats(data)
-  const ratingData = calcRatingDistribution(data)
-  const tempTrend = calcTemperatureTrend(data)
+  const activeData = filteredData || data
+  const kpis = calcKPIs(activeData)
+  const funnel = calcFunnel(activeData)
+  const jobStats = calcJobStats(activeData)
+  const ratingData = calcRatingDistribution(activeData)
+  const tempTrend = calcTemperatureTrend(activeData)
   const insights = generateInsights(kpis, funnel, ratingData, tempTrend)
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Header />
+
+        {/* Job Filter */}
+        {data.jobs.length > 0 && (
+          <div className="mb-6 flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-600">表示する求人:</label>
+            <select
+              value={selectedJobId}
+              onChange={(e) => setSelectedJobId(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm min-w-[200px]"
+            >
+              <option value="all">すべての求人</option>
+              {data.jobs.map((job) => (
+                <option key={job.id} value={job.id}>{job.title}{job.department ? ` (${job.department})` : ''}</option>
+              ))}
+            </select>
+            {selectedJobId !== 'all' && (
+              <button
+                onClick={() => setSelectedJobId('all')}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                フィルター解除
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="space-y-8">
           {/* Section 1: KPI */}
