@@ -6,6 +6,7 @@ import {
   Eye, Star, MessageSquare, BookOpen, TrendingUp, Clock, History,
   FileText, Target, Users, Briefcase, Award, Building2, Heart,
   Lightbulb, Shield, ChevronDown, ChevronUp, RefreshCw, Calendar,
+  AlertTriangle,
 } from 'lucide-react'
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000001'
@@ -48,6 +49,10 @@ interface RevpData {
   pdf_url?: string
   updated_at?: string
   revp_history?: RevpHistoryEntry[]
+  source_quotes?: string[]
+  summary?: string
+  improvement_areas?: string[]
+  key_numbers?: Array<{ label: string; value: string; context: string }>
 }
 
 // --- Radar Chart Component (SVG) ---
@@ -411,6 +416,8 @@ export default function RevpReportPage() {
   const [uploading, setUploading] = useState(false)
   const [showRawText, setShowRawText] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [funnelData, setFunnelData] = useState<any>(null)
+  const [insights, setInsights] = useState<any[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const updateFileInputRef = useRef<HTMLInputElement>(null)
 
@@ -430,6 +437,12 @@ export default function RevpReportPage() {
         if (revp) {
           setData(revp)
         }
+
+        // Fetch real recruitment funnel data
+        const insightsRes = await fetch('/api/recruitment-insights')
+        const insightsData = await insightsRes.json()
+        if (insightsData.funnel) setFunnelData(insightsData.funnel)
+        if (insightsData.insights) setInsights(insightsData.insights)
       } catch {}
       finally { setLoading(false) }
     }
@@ -664,6 +677,13 @@ export default function RevpReportPage() {
         </div>
       </div>
 
+      {/* ====== REVP SUMMARY ====== */}
+      {data.summary && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
+          <p className="text-sm text-indigo-800 leading-relaxed">{data.summary}</p>
+        </div>
+      )}
+
       {/* ====== RADAR CHART + SCORE CARDS ====== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Radar Chart */}
@@ -696,36 +716,127 @@ export default function RevpReportPage() {
         </div>
       </div>
 
-      {/* ====== RECRUITMENT JOURNEY LINE CHART ====== */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingUp className="w-5 h-5 text-indigo-600" />
-          <h2 className="text-base font-bold text-gray-900">採用成功ジャーニー</h2>
-        </div>
-        <p className="text-xs text-gray-400 mb-4">認知から承諾までの各ステージにおける通過人数と転換率（サンプルデータ）</p>
-        <div className="overflow-x-auto">
-          <div className="min-w-[600px]">
-            <JourneyLineChart stages={JOURNEY_STAGES} />
+      {/* PDF引用データ */}
+      {data.source_quotes && data.source_quotes.length > 0 && (
+        <div className="card p-6 mb-6">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-indigo-500" />
+            REVPレポートからの引用
+          </h2>
+          <div className="space-y-2">
+            {data.source_quotes.map((quote: string, i: number) => (
+              <div key={i} className="flex items-start gap-3 p-3 bg-indigo-50/50 rounded-lg border-l-3 border-indigo-400">
+                <span className="text-indigo-400 text-lg flex-shrink-0">&ldquo;</span>
+                <p className="text-sm text-gray-700 leading-relaxed italic">{quote}</p>
+              </div>
+            ))}
           </div>
         </div>
-        {/* Stage conversion summary */}
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2 mt-4">
-          {JOURNEY_STAGES.map((s, i) => {
-            const rate = i > 0 ? Math.round((s.count / JOURNEY_STAGES[i - 1].count) * 100) : 100
-            return (
-              <div key={s.key} className="text-center p-2 rounded-lg bg-gray-50">
-                <p className="text-[10px] text-gray-400">{s.label}</p>
-                <p className="text-sm font-bold text-gray-800">{s.count}</p>
-                {i > 0 && (
-                  <p className={`text-[10px] font-semibold ${rate >= 50 ? 'text-emerald-600' : rate >= 30 ? 'text-amber-600' : 'text-rose-600'}`}>
-                    {rate}%
-                  </p>
+      )}
+
+      {/* 重要な数値データ */}
+      {data.key_numbers && data.key_numbers.length > 0 && (
+        <div className="card p-6 mb-6">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            重要データ
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {data.key_numbers.map((item: any, i: number) => (
+              <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-indigo-600">{item.value}</p>
+                <p className="text-sm font-medium text-gray-800 mt-1">{item.label}</p>
+                {item.context && <p className="text-xs text-gray-400 mt-0.5">{item.context}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 改善領域 */}
+      {data.improvement_areas && data.improvement_areas.length > 0 && (
+        <div className="card p-6 mb-6">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            改善が必要な領域
+          </h2>
+          <div className="space-y-2">
+            {data.improvement_areas.map((area: string, i: number) => (
+              <div key={i} className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                <span className="w-5 h-5 rounded-full bg-amber-200 text-amber-700 text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                <p className="text-sm text-amber-800">{area}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ====== RECRUITMENT JOURNEY LINE CHART ====== */}
+      {(() => {
+        const journeyStages = funnelData?.stages || JOURNEY_STAGES
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-base font-bold text-gray-900">採用成功ジャーニー</h2>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">認知から承諾までの各ステージにおける通過人数と転換率{!funnelData ? '（サンプルデータ）' : ''}</p>
+            <div className="overflow-x-auto">
+              <div className="min-w-[600px]">
+                <JourneyLineChart stages={journeyStages} />
+              </div>
+            </div>
+            {/* Stage conversion summary */}
+            <div className="grid grid-cols-4 lg:grid-cols-8 gap-2 mt-4">
+              {journeyStages.map((s: any, i: number) => {
+                const rate = i > 0 ? Math.round((s.count / journeyStages[i - 1].count) * 100) : 100
+                return (
+                  <div key={s.key} className="text-center p-2 rounded-lg bg-gray-50">
+                    <p className="text-[10px] text-gray-400">{s.label}</p>
+                    <p className="text-sm font-bold text-gray-800">{s.count}</p>
+                    {i > 0 && (
+                      <p className={`text-[10px] font-semibold ${rate >= 50 ? 'text-emerald-600' : rate >= 30 ? 'text-amber-600' : 'text-rose-600'}`}>
+                        {rate}%
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* 採用改善インサイト */}
+      {insights.length > 0 && (
+        <div className="card p-6 mb-6">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-violet-500" />
+            採用プロセス改善のヒント
+          </h2>
+          <div className="space-y-3">
+            {insights.map((insight: any, i: number) => (
+              <div key={i} className={`p-4 rounded-xl border ${
+                insight.type === 'critical' ? 'bg-red-50 border-red-200' :
+                insight.type === 'warning' ? 'bg-amber-50 border-amber-200' :
+                'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    insight.type === 'critical' ? 'bg-red-200 text-red-800' :
+                    insight.type === 'warning' ? 'bg-amber-200 text-amber-800' :
+                    'bg-blue-200 text-blue-800'
+                  }`}>{insight.area}</span>
+                </div>
+                <p className="text-sm text-gray-800 font-medium">{insight.title || insight.message}</p>
+                {insight.suggestion && (
+                  <p className="text-xs text-gray-600 mt-1">💡 {insight.suggestion}</p>
                 )}
               </div>
-            )
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ====== STRENGTHS ====== */}
       <CollapsibleSection

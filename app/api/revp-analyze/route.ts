@@ -104,5 +104,14 @@ const PROMPT = `この文書はREVP（Realistic Employee Value Proposition）診
 - strengths: 自社の強み・差別化ポイント（文字列の配列、3〜5個）
 - messages: 候補者に伝えるべき重要メッセージ（文字列の配列、3〜5個）
 - episodes: 魅力を伝える具体的なエピソード（文字列の配列、2〜3個）
+- source_quotes: PDFから直接引用した重要な文章（文字列の配列、5〜10個）。
+  診断結果の核心的な記述、数値データ、特徴的な表現をそのまま引用してください。
+  例: "社員の87%が『成長機会が豊富』と回答", "理念浸透度は業界平均の1.4倍"
+- summary: REVP診断の総合サマリー（PDFの内容を要約した2-3文）
+- improvement_areas: 改善が必要な領域（文字列の配列、2〜3個）。
+  スコアが低い項目や、PDF内で課題として言及されている領域。
+- key_numbers: PDF内の重要な数値データ（オブジェクトの配列）。
+  各要素は { label: string, value: string, context: string }。
+  例: { label: "社員満足度", value: "87%", context: "前年比+5pt" }
 
 必ず有効なJSONのみを返してください。マークダウンのコードブロックや説明文は不要です。`
