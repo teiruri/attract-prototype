@@ -51,6 +51,7 @@ const STAGE_ORDER = [
 
 const STAGE_LABELS: Record<string, string> = {
   document_screening: '書類選考',
+  recruiter: 'リクルーター面談',
   aptitude: '適性検査',
   es: 'ES選考',
   casual: 'カジュアル面談',
@@ -58,16 +59,19 @@ const STAGE_LABELS: Record<string, string> = {
   interview_2: '二次面接',
   interview_3: '三次面接',
   interview_final: '最終面接',
-  offer: 'オファー',
+  offer: 'オファー面談',
   hired: '内定承諾',
   active: '選考中',
-  gd: 'GD',
+  gd: 'グループディスカッション',
+  presentation: 'プレゼン選考',
+  trial: '体験入社・ワークサンプル',
   briefing: '説明会',
 }
 
 const STAGE_COLORS: Record<string, string> = {
   document_screening: 'bg-slate-100 text-slate-600 border-slate-200',
-  aptitude: 'bg-gray-100 text-gray-600 border-gray-200',
+  recruiter: 'bg-teal-50 text-teal-600 border-teal-200',
+  aptitude: 'bg-cyan-50 text-cyan-600 border-cyan-200',
   es: 'bg-gray-100 text-gray-600 border-gray-200',
   casual: 'bg-gray-100 text-gray-600 border-gray-200',
   interview_1: 'bg-blue-50 text-blue-600 border-blue-200',
@@ -77,6 +81,9 @@ const STAGE_COLORS: Record<string, string> = {
   offer: 'bg-amber-50 text-amber-600 border-amber-200',
   hired: 'bg-emerald-50 text-emerald-600 border-emerald-200',
   active: 'bg-gray-100 text-gray-600 border-gray-200',
+  gd: 'bg-orange-50 text-orange-600 border-orange-200',
+  presentation: 'bg-pink-50 text-pink-600 border-pink-200',
+  trial: 'bg-lime-50 text-lime-600 border-lime-200',
 }
 
 function getResultBadge(result: string | null | undefined): { label: string; color: string } {

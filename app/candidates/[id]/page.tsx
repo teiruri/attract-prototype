@@ -114,10 +114,17 @@ const DEFAULT_CRITERIA: EvaluationCriterion[] = [
 ]
 
 const STAGE_OPTIONS = [
+  { value: 'recruiter', label: 'リクルーター面談' },
+  { value: 'casual', label: 'カジュアル面談' },
   { value: 'interview_1', label: '一次面接' },
   { value: 'interview_2', label: '二次面接' },
   { value: 'interview_3', label: '三次面接' },
   { value: 'interview_final', label: '最終面接' },
+  { value: 'aptitude', label: '適性検査' },
+  { value: 'gd', label: 'グループディスカッション' },
+  { value: 'presentation', label: 'プレゼン選考' },
+  { value: 'trial', label: '体験入社・ワークサンプル' },
+  { value: 'offer', label: 'オファー面談' },
 ]
 
 const RESULT_OPTIONS = [
@@ -131,20 +138,26 @@ const ACCEPTED_FILE_TYPES = '.mp4,.webm,.mp3,.m4a,.txt,.pdf,.docx'
 
 function getStageLabel(stage: string): string {
   const labels: Record<string, string> = {
-    casual: 'カジュアル面談', interview_1: '一次面接', interview_2: '二次面接',
+    recruiter: 'リクルーター面談', casual: 'カジュアル面談',
+    interview_1: '一次面接', interview_2: '二次面接',
     interview_3: '三次面接', interview_final: '最終面接',
-    final: '最終面接', offer: 'オファー', hired: '内定承諾',
-    briefing: '説明会', es: 'ES選考', aptitude: '適性検査', gd: 'GD', active: '選考中',
+    final: '最終面接', offer: 'オファー面談', hired: '内定承諾',
+    briefing: '説明会', es: 'ES選考', aptitude: '適性検査',
+    gd: 'グループディスカッション', presentation: 'プレゼン選考',
+    trial: '体験入社・ワークサンプル', active: '選考中',
   }
   return labels[stage] || stage || '選考中'
 }
 
 function getStageColor(stage: string): string {
   const colors: Record<string, string> = {
-    casual: 'bg-gray-100 text-gray-600', interview_1: 'bg-blue-50 text-blue-600',
-    interview_2: 'bg-indigo-50 text-indigo-600', interview_3: 'bg-violet-50 text-violet-600',
-    interview_final: 'bg-purple-50 text-purple-600', final: 'bg-purple-50 text-purple-600',
-    offer: 'bg-amber-50 text-amber-600', hired: 'bg-emerald-50 text-emerald-600',
+    recruiter: 'bg-teal-50 text-teal-600', casual: 'bg-gray-100 text-gray-600',
+    interview_1: 'bg-blue-50 text-blue-600', interview_2: 'bg-indigo-50 text-indigo-600',
+    interview_3: 'bg-violet-50 text-violet-600', interview_final: 'bg-purple-50 text-purple-600',
+    final: 'bg-purple-50 text-purple-600', offer: 'bg-amber-50 text-amber-600',
+    hired: 'bg-emerald-50 text-emerald-600', aptitude: 'bg-cyan-50 text-cyan-600',
+    gd: 'bg-orange-50 text-orange-600', presentation: 'bg-pink-50 text-pink-600',
+    trial: 'bg-lime-50 text-lime-600',
   }
   return colors[stage] || 'bg-gray-100 text-gray-600'
 }
@@ -173,15 +186,16 @@ function mapEvalResultToDBResult(evalResult: string): string {
   }
 }
 
-const STAGE_ORDER = ['interview_1', 'interview_2', 'interview_3', 'interview_final']
+// Suggested order for auto-selecting next stage (user can freely change)
+const STAGE_SUGGEST_ORDER = ['interview_1', 'interview_2', 'interview_3', 'interview_final']
 
 function getNextStage(existingInterviews?: InterviewRecord[]): string {
   if (!existingInterviews || existingInterviews.length === 0) return 'interview_1'
   const existingStages = existingInterviews.map(iv => iv.stage)
-  for (const stage of STAGE_ORDER) {
+  // Suggest next stage in common flow, but user can freely pick any
+  for (const stage of STAGE_SUGGEST_ORDER) {
     if (!existingStages.includes(stage)) return stage
   }
-  // All stages exist — default to final
   return 'interview_final'
 }
 
