@@ -92,14 +92,20 @@ export default function RevpReportPage() {
       const formData = new FormData()
       formData.append('file', file)
 
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000) // 120秒タイムアウト
+
       const res = await fetch('/api/revp-analyze', {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
+
       const json = await res.json()
       if (!res.ok) {
         console.error('REVP analyze error:', json)
-        alert(`ファイルの解析に失敗しました: ${json.error || res.statusText}`)
+        alert(`解析エラー: ${json.error || '不明なエラー'}`)
         return
       }
       if (json.revp_data) {
@@ -108,10 +114,15 @@ export default function RevpReportPage() {
           ...json.revp_data,
           raw_text: json.raw_text || prev.raw_text,
         }))
+        alert('診断結果を読み込みました。内容を確認して「保存」を押してください。')
       }
     } catch (err) {
       console.error('REVP upload error:', err)
-      alert('ファイルの解析に失敗しました。ネットワーク接続を確認してください。')
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        alert('AI解析がタイムアウトしました。ファイルサイズが大きすぎる可能性があります。')
+      } else {
+        alert('ファイルの解析に失敗しました。もう一度お試しください。')
+      }
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''

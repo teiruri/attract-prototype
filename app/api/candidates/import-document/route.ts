@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
