@@ -52,19 +52,27 @@ export default function PersonalOfferPage() {
     setGenerating(true)
     setError('')
     try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000)
       const res = await fetch(`/api/candidates/${id}/personal-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ candidate, job, revp, interviews }),
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
       const data = await res.json()
       if (data.error) {
         setError(data.error)
       } else if (data.result) {
         setResult(data.result)
       }
-    } catch {
-      setError('生成中にエラーが発生しました')
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError('AI生成がタイムアウトしました。しばらく待ってから再度お試しください。')
+      } else {
+        setError('生成中にエラーが発生しました。しばらく待ってから再度お試しください。')
+      }
     } finally {
       setGenerating(false)
     }
