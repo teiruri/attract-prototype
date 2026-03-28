@@ -32,6 +32,7 @@ import {
   X,
   Loader2,
 } from 'lucide-react'
+import PredictionCard from './components/PredictionCard'
 
 type Tab = 'overview' | 'interviews' | 'signals' | 'card'
 
@@ -1046,6 +1047,9 @@ export default function CandidateDetailPage() {
 
             {/* Right: Quick Stats & Actions */}
             <div className="space-y-4">
+              {/* Prediction Card */}
+              <PredictionCard candidateId={id as string} />
+
               {/* Quick Actions */}
               <div className="card p-5">
                 <p className="label mb-3">クイックアクション</p>
